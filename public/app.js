@@ -36,7 +36,7 @@
   const S = {
     estado: null, yo: null, enLinea: [], sinSesion: false, conexion: 'conectando', errEntrada: '',
     tab: lsGet('mp.tab.v2', 'hoy'), stage: 'semilla', fAutor: 'todos', q: '', fResp: lsGet('mp.fresp', 'todas'), fFase: 'todas', colT: 'pendiente', verHechas: false, arrastrandoKind: 'idea',
-    openIdea: null, openTarea: null, prov: Math.floor(Math.random() * PROVOCACIONES.length), arrastrando: null, tipoDec: 'otra',
+    openIdea: null, openTarea: null, leido: lsGet('mp.chat.leido', ''), prov: Math.floor(Math.random() * PROVOCACIONES.length), arrastrando: null, tipoDec: 'otra',
   };
   let es = null;
   const timers = {};
@@ -161,12 +161,14 @@
     const keep = captureFocus(app);
     if (S.sinSesion) { app.innerHTML = viewEntrada(); restoreFocus(app, keep); return; }
     if (!S.estado) { app.innerHTML = S.conexion === 'bad' ? '<div class="empty"><b>No se pudo cargar el tablero.</b> Revisa tu conexión; se reintenta solo cada 10 segundos.</div>' : '<div class="empty">Cargando el tablero…</div>'; return; }
+    const log0 = document.getElementById('chat-log'); const abajo = !log0 || (log0.scrollHeight - log0.scrollTop - log0.clientHeight < 80); const scrollPrev = log0 ? log0.scrollTop : 0;
     app.innerHTML = viewHeader() + viewTabs() + viewPanel() + viewFoot();
     restoreFocus(app, keep);
+    const log1 = document.getElementById('chat-log'); if (log1) log1.scrollTop = abajo ? log1.scrollHeight : scrollPrev;
     if (S.openIdea) renderDlg(); else if (S.openTarea) renderDlgTarea();
   }
   function renderHeader() { const h = document.getElementById('cabecera'); if (h && S.estado) h.outerHTML = viewHeader(); }
-  function viewPanel() { if (S.tab === 'tareas') return viewTareas(); if (S.tab === 'ideas') return viewIdeas(); if (S.tab === 'iter') return viewIter(); if (S.tab === 'actividad') return viewActividad(); return viewHoy(); }
+  function viewPanel() { if (S.tab === 'tareas') return viewTareas(); if (S.tab === 'ideas') return viewIdeas(); if (S.tab === 'chat') return viewChat(); if (S.tab === 'iter') return viewIter(); if (S.tab === 'actividad') return viewActividad(); return viewHoy(); }
   function viewFoot() {
     return '<div class="foot-links"><a href="https://docs.google.com/document/d/1VihQ50vREEp9m3yqD7ek7wDx0Z1pOueF3BC_ICT9JhA/edit" target="_blank" rel="noopener">Doc del método v0.1</a><a href="https://drive.google.com/drive/folders/1RiT2jf0FVqJdx-KTnQBxuYEWU7-CnKW-" target="_blank" rel="noopener">Carpeta Mindprint en Drive</a></div>';
   }
@@ -201,7 +203,7 @@
     const hot = mias.some(vencida);
     const it = S.estado.iteracion;
     const abiertas = S.estado.tareas.filter((t) => t.estado !== 'hecha').length;
-    const tabs = [['hoy', 'Hoy', String(mias.length), hot ? 'hot' : ''], ['tareas', 'Tareas', String(abiertas), ''], ['ideas', 'Ideas', String(S.estado.ideas.length), ''], ['iter', 'Iteración', `#${it.numero} · ${FASES[it.fase] || it.fase}`, ''], ['actividad', 'Actividad', '', '']];
+    const tabs = [['hoy', 'Hoy', String(mias.length), hot ? 'hot' : ''], ['tareas', 'Tareas', String(abiertas), ''], ['ideas', 'Ideas', String(S.estado.ideas.length), ''], ['chat', 'Chat', noLeidos() ? String(noLeidos()) : '', noLeidos() ? 'hot' : ''], ['iter', 'Iteración', `#${it.numero} · ${FASES[it.fase] || it.fase}`, ''], ['actividad', 'Actividad', '', '']];
     return `<nav class="tabs" role="tablist">${tabs.map((t) => `<button class="tab" role="tab" data-act="tab" data-tab="${t[0]}" aria-selected="${S.tab === t[0]}">${t[1]}${t[2] ? `<span class="n ${t[3]}">${esc(t[2])}</span>` : ''}</button>`).join('')}</nav>`;
   }
 
@@ -236,7 +238,7 @@
       <div class="meta">${i.autor ? avatar(i.autor, 'sm') : ''}
         <span class="crit" title="acceso · dolor · agentizable">${CRIT.map((k) => `<i class="l${c[k[0]] || 0}"></i>`).join('')}</span>
         <span class="votos" title="votos">▲ ${votosIdea(i)}${voters.length ? ` <span class="avs">${voters.map((p) => avatar(p, 'sm')).join('')}</span>` : ''}</span>
-        ${rx ? `<span class="rx">${esc(rx)}</span>` : ''}
+        ${rx ? `<span class="rx">${esc(rx)}</span>` : ''}${comentariosDe('idea', i.id).length ? `<span class="tag">${comentariosDe('idea', i.id).length} coment.</span>` : ''}
       </div></div>`;
   }
   function renderDlg() {
@@ -254,6 +256,7 @@
     h += `<div class="field"><label>Qué haría el agente</label><textarea class="in" rows="2" ${B('agente')} placeholder="Lee, propone, ejecuta… hasta dónde llega">${esc(i.agente)}</textarea></div>`;
     h += `<div class="field"><label>Cómo sabríamos que vale</label><textarea class="in" rows="2" ${B('validacion')} placeholder="La señal del cliente que nos haría seguir">${esc(i.validacion)}</textarea></div>`;
     h += `<div class="field"><label>Notas</label><textarea class="in" rows="2" ${B('notas')}>${esc(i.notas)}</textarea></div>`;
+    h += seccionComentarios('idea', i.id);
     h += '</div><div class="side">';
     h += `<div class="field"><label>Quién la propone</label><select class="in" ${B('autor')}><option value="">—</option>${Object.keys(P()).map((p) => `<option value="${p}"${i.autor === p ? ' selected' : ''}>${esc(P()[p].nombre)}</option>`).join('')}</select></div>`;
     h += `<div class="field"><label>Tus votos en esta idea</label><div class="votebox"><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="-1"${mine <= 0 ? ' disabled' : ''}>−</button><span class="num">${mine}</span><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="1"${quedan <= 0 ? ' disabled' : ''}>+</button><span class="tag">te quedan ${quedan} · total ▲ ${votosIdea(i)}</span></div>`;
@@ -378,7 +381,7 @@
       + `<div class="t">${esc(t.titulo)}</div>`
       + (t.detalle ? `<div class="d">${esc(t.detalle)}</div>` : '')
       + (t.estado === 'bloqueada' && t.motivo ? `<div class="motivo">${esc(t.motivo)}</div>` : '')
-      + `<div class="meta">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${pillVence(t)}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<span class="tag" title="${esc(idea.titulo)}">idea</span>` : ''}</div></div>`;
+      + `<div class="meta">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${pillVence(t)}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<span class="tag" title="${esc(idea.titulo)}">idea</span>` : ''}${comentariosDe('tarea', t.id).length ? `<span class="tag">${comentariosDe('tarea', t.id).length} coment.</span>` : ''}</div></div>`;
   }
   function renderDlgTarea() {
     const dlg = document.getElementById('dlg'); const t = tareaById(S.openTarea);
@@ -390,6 +393,7 @@
     h += `<input class="title" ${B('titulo')} value="${esc(t.titulo)}" maxlength="160" aria-label="Título">`;
     h += `<div class="field"><label>Detalle o liga</label><textarea class="in" rows="3" ${B('detalle')} placeholder="Contexto, liga al Doc, lo que haga falta para hacerla">${esc(t.detalle)}</textarea></div>`;
     if (t.estado === 'bloqueada') h += `<div class="field"><label>Bloqueada por</label><input class="in" ${B('motivo')} value="${esc(t.motivo)}" placeholder="Qué falta o quién la destraba"></div>`;
+    h += seccionComentarios('tarea', t.id);
     h += '</div><div class="side">';
     h += `<div class="field"><label>Responsable</label><select class="in" ${B('responsable')}>${Object.entries(RESP).map(([k, n]) => `<option value="${k}"${t.responsable === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`;
     h += `<div class="field"><label>Fase</label><select class="in" ${B('fase')}>${Object.entries(FASES).map(([k, n]) => `<option value="${k}"${t.fase === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`;
@@ -400,6 +404,56 @@
     h += '</div>';
     dlg.innerHTML = h; restoreFocus(dlg, keep);
     if (!dlg.open) dlg.showModal();
+  }
+
+  /* ---- chat y comentarios (un solo modelo: mensaje con o sin referencia) ---- */
+  const mensajes = () => (S.estado && S.estado.mensajes) || [];
+  const comentariosDe = (tipo, id) => mensajes().filter((m) => m.ref && m.ref.tipo === tipo && m.ref.id === id);
+  const noLeidos = () => mensajes().filter((m) => m.quien !== yo() && String(m.fecha) > String(S.leido || '')).length;
+  function formatoMensaje(txt) {
+    let h = esc(txt);
+    h = h.replace(/https?:\/\/[^\s<]+/g, (u) => { const limpio = u.replace(/[),.;!?]+$/, ''); const cola = u.slice(limpio.length); return `<a href="${limpio}" target="_blank" rel="noopener">${limpio}</a>${cola}`; });
+    h = h.replace(/(^|[^\w])@(pablo|max|daniel)\b/gi, (m0, pre, p) => `${pre}<span class="mention${p.toLowerCase() === yo() ? ' me' : ''}">@${p}</span>`);
+    return h.replace(/\n/g, '<br>');
+  }
+  function itemMsg(m, enHilo) {
+    const mio = m.quien === yo();
+    const ref = !enHilo && m.ref ? (m.ref.tipo === 'idea' ? ideaById(m.ref.id) : tareaById(m.ref.id)) : null;
+    const chipRef = !enHilo && m.ref ? (ref ? `<button class="chip sm" type="button" data-act="${m.ref.tipo === 'idea' ? 'open' : 'open-tarea'}" data-id="${esc(m.ref.id)}">${m.ref.tipo === 'idea' ? 'idea' : 'tarea'}: ${esc(m.ref.titulo)}</button>` : `<span class="tag">${m.ref.tipo}: ${esc(m.ref.titulo)} (ya no existe)</span>`) : '';
+    return `<div class="msg${mio ? ' mio' : ''}">${avatar(m.quien, 'sm')}<div class="cuerpo"><div class="hd"><b>${esc(nombre(m.quien) || '¿?')}</b><span class="when" title="${esc(fmtFechaHora(m.fecha))}">${esc(relTiempo(m.fecha))}</span>${chipRef}${mio ? `<button class="lnk" type="button" data-act="del-msg" data-id="${esc(m.id)}" aria-label="Borrar mensaje">borrar</button>` : ''}</div><div class="txt">${formatoMensaje(m.texto)}</div></div></div>`;
+  }
+  function viewChat() {
+    const items = mensajes();
+    if (items.length) { const ultimo = items[items.length - 1].fecha; if (String(ultimo) > String(S.leido || '')) { S.leido = ultimo; lsSet('mp.chat.leido', ultimo); } }
+    let h = '<div class="panel chat"><div class="chat-log" id="chat-log">';
+    if (!items.length) h += '<div class="empty"><b>Todavía nadie escribe.</b> Este chat es de los tres. Los comentarios que dejen en una tarea o idea también aparecen aquí, con su referencia.</div>';
+    let dia = '';
+    for (const m of items) { const d = diaDe(m.fecha); if (d !== dia) { dia = d; h += `<div class="day">${esc(etiquetaDia(d))}</div>`; } h += itemMsg(m, false); }
+    h += '</div>';
+    h += '<form class="composer" data-act="add-msg"><textarea class="in" id="chat-new" data-keep="chat-new" rows="2" placeholder="Escribe al equipo. Enter envía, Shift+Enter salto de línea. @pablo @max @daniel para mencionar." maxlength="1000"></textarea><button class="btn primary" type="submit">Enviar</button></form>';
+    h += '</div>';
+    return h;
+  }
+  function seccionComentarios(tipo, id) {
+    const hilo = comentariosDe(tipo, id);
+    return `<div class="field comentarios"><label>Comentarios${hilo.length ? ` (${hilo.length})` : ''}</label>`
+      + `<div class="hilo">${hilo.length ? hilo.map((m) => itemMsg(m, true)).join('') : '<span class="hint">Sin comentarios. Lo que escribas aquí también sale en el Chat con la referencia.</span>'}</div>`
+      + `<form class="composer" data-act="add-msg" data-ref-tipo="${tipo}" data-ref-id="${esc(id)}"><textarea class="in" data-keep="coment-${esc(id)}" rows="2" placeholder="Comentar (Enter envía)" maxlength="1000"></textarea><button class="btn sm primary" type="submit">Comentar</button></form></div>`;
+  }
+  async function enviarMensaje(form) {
+    const ta = form.querySelector('textarea'); const texto = (ta.value || '').trim(); if (!texto) return;
+    const ref = form.dataset.refTipo ? { tipo: form.dataset.refTipo, id: form.dataset.refId } : null;
+    try {
+      const j = await api('POST', '/api/mensajes', ref ? { texto, ref } : { texto });
+      S.estado.mensajes.push(j.doc); S.estado.version = j.version;
+      if (!ref || S.tab === 'chat') { S.leido = j.doc.fecha; lsSet('mp.chat.leido', j.doc.fecha); }
+      const ta2 = document.querySelector(`[data-keep="${ta.dataset.keep}"]`); if (ta2) ta2.value = ''; ta.value = '';
+      render();
+    } catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } }
+  }
+  async function borrarMensaje(id) {
+    try { const j = await api('DELETE', `/api/mensajes/${encodeURIComponent(id)}`); S.estado.mensajes = S.estado.mensajes.filter((m) => m.id !== id); S.estado.version = j.version; render(); }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(e.code === 'ajeno' ? 'Solo quien escribió el mensaje puede borrarlo.' : mensajeError(e)); await cargarEstado(); } }
   }
 
   /* ---- iteración ---- */
@@ -472,11 +526,13 @@
     if (act === 'crit') { const i = ideaById(el.dataset.id); if (!i) return; await guardarIdea({ ...i, criterios: { ...(i.criterios || {}), [el.dataset.k]: parseInt(el.dataset.v, 10) } }); return; }
     if (act === 'reacc') { const i = ideaById(el.dataset.id); if (!i) return; const me = yo(); const r = { ...(i.reacciones || {}) }; r[me] = r[me] === el.dataset.r ? '' : el.dataset.r; await guardarIdea({ ...i, reacciones: r }); return; }
     if (act === 'del-idea') { const i = ideaById(el.dataset.id); if (!i) return; if (!confirm(`¿Eliminar la idea "${i.titulo || ''}"? No se puede deshacer.`)) return; S.openIdea = null; document.getElementById('dlg').close(); await borrarIdea(i.id); return; }
+    if (act === 'del-msg') { if (!confirm('¿Borrar tu mensaje?')) return; await borrarMensaje(el.dataset.id); return; }
     if (act === 'del-tarea') { const t = tareaById(el.dataset.id); if (!t) return; if (!confirm(`¿Eliminar la tarea "${t.titulo || ''}"?`)) return; S.openTarea = null; const d = document.getElementById('dlg'); if (d.open) d.close(); await borrarTarea(t.id); return; }
     if (act === 'hecha') { const t = tareaById(el.dataset.id); if (!t) return; await guardarTarea({ ...t, estado: t.estado === 'hecha' ? 'pendiente' : 'hecha' }); return; }
     if (act === 'fase') { const it = S.estado.iteracion; if (it.fase !== el.dataset.f) await guardarIteracion({ ...it, fase: el.dataset.f }); return; }
   });
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && e.target.tagName === 'TEXTAREA' && e.target.closest && e.target.closest('form[data-act="add-msg"]')) { e.preventDefault(); const f = e.target.closest('form'); if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); return; }
     if (e.key === 'Enter' && e.target.closest && e.target.closest('.card[data-act]')) { e.preventDefault(); e.target.closest('.card').click(); return; }
     if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && S.tab === 'ideas' && S.estado && !S.openIdea) {
       const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
@@ -510,6 +566,7 @@
       if (ok) { const i2 = document.getElementById('mia-new'); if (i2) i2.value = ''; render(); toast('Tarea agregada a lo tuyo'); }
       return;
     }
+    if (f.dataset.act === 'add-msg') { await enviarMensaje(f); return; }
     if (f.dataset.act === 'add-dec') {
       const ta = document.getElementById('dec-new'); const txt = ta.value.trim(); if (!txt) return;
       const it = S.estado.iteracion;

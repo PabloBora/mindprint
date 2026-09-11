@@ -28,8 +28,10 @@ entrada (pegar la liga personal).
 
 Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, el equipo, pendientes de
 la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre y diálogo de edición) ·
-**Ideas** (tablero por etapa con votos y criterios) · **Iteración** (fases, datos, artefactos, decisiones) ·
-**Actividad** (todo lo que pasó, por día).
+**Ideas** (tablero por etapa con votos y criterios) · **Chat** (mensajes del equipo con no leídos, menciones
+`@nombre`, ligas auto-enlazadas y referencias clicables) · **Iteración** (fases, datos, artefactos, decisiones) ·
+**Actividad** (todo lo que pasó, por día). Los diálogos de tarea e idea llevan al pie su hilo de comentarios,
+que son mensajes con referencia y también salen en el Chat.
 
 ## Configuración
 

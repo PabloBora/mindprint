@@ -297,3 +297,23 @@ dialog::backdrop{background:rgba(27,31,58,.5)}
 .hint{font-size:13px;color:var(--muted);line-height:1.45}
 .check.alert{color:var(--bad);border-color:var(--bad);font-weight:700}
 span.check{cursor:default}
+
+/* ---- R2c: chat y comentarios ---- */
+.chat-log{max-height:calc(100vh - 290px);min-height:240px;overflow-y:auto;padding-right:4px;display:grid;align-content:start;gap:2px}
+.chat-log .day{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:14px 0 6px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.msg{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:7px 0;align-items:start}
+.msg .hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.msg .hd b{color:var(--ink);font-size:13px}
+.msg .txt{font-size:14px;line-height:1.45;overflow-wrap:anywhere}
+.msg .txt a{overflow-wrap:anywhere}
+.msg.mio .hd b{color:var(--accent)}
+.mention{background:var(--accent-soft);color:var(--ink);border-radius:3px;padding:0 3px;font-weight:500}
+.mention.me{background:var(--marker);color:var(--marker-ink)}
+.composer{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:12px}
+.composer textarea{resize:none}
+.chip.sm{padding:1px 8px;font-size:11px}
+.comentarios{padding-top:10px;border-top:1px solid var(--line)}
+.hilo{display:grid;gap:0;max-height:260px;overflow-y:auto}
+.hilo .msg{padding:6px 0;border-bottom:1px solid var(--line)}
+.hilo .msg:last-child{border-bottom:0}
+.comentarios .composer{margin-top:8px}
