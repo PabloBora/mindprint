@@ -137,13 +137,13 @@ test('una cookie bien firmada pero expirada no abre la API', async () => {
   } finally { await cerrar(); }
 });
 
-test('en producción: http redirige a https, la cookie lleva Secure y hay HSTS', async () => {
+test('en producción: http redirige (308) a https, la cookie lleva Secure y hay HSTS', async () => {
   const { app } = await crearApp({ secreto: SECRETO, tokens: `pablo:${TOK_PABLO}`, datos: crearMemory(), produccion: true });
   const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
     const r1 = await fetch(`${base}/salud`, { redirect: 'manual' });
-    assert.equal(r1.status, 301); assert.match(r1.headers.get('location'), /^https:\/\//);
+    assert.equal(r1.status, 308); assert.match(r1.headers.get('location'), /^https:\/\/127\.0\.0\.1\/salud$/);
     const r2 = await fetch(`${base}/entrar/${TOK_PABLO}`, { redirect: 'manual', headers: { 'x-forwarded-proto': 'https' } });
     assert.equal(r2.status, 302);
     assert.match(r2.headers.get('set-cookie'), /Secure/);

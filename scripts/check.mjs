@@ -15,12 +15,12 @@ for (const dir of ['src', 'scripts', 'test', 'public']) {
   for (const f of fs.readdirSync(abs, { recursive: true })) if (/\.m?js$/.test(f)) archivos.push(path.join(abs, f));
 }
 let fallas = 0;
-function revisar(ruta, etiqueta, modulo) {
-  const args = modulo ? ['--input-type=module', '--check', ruta] : ['--check', ruta];
-  try { execFileSync(process.execPath, args, { stdio: 'pipe' }); }
+function revisar(ruta, etiqueta) {
+  // La extensión decide el modo (.mjs = módulo); `--input-type` no aplica a archivos.
+  try { execFileSync(process.execPath, ['--check', ruta], { stdio: 'pipe' }); }
   catch (e) { fallas++; console.error(`✗ ${etiqueta}\n${e.stderr}`); }
 }
-for (const f of archivos) revisar(f, path.relative(raiz, f), false);
+for (const f of archivos) revisar(f, path.relative(raiz, f));
 
 const html = path.join(raiz, 'public', 'index.html');
 let inline = 0;
@@ -32,7 +32,7 @@ if (fs.existsSync(html)) {
     const esModulo = /type=["']module["']/.test(m[1]);
     const ruta = path.join(tmp, `inline-${++inline}.${esModulo ? 'mjs' : 'js'}`);
     fs.writeFileSync(ruta, m[2]);
-    revisar(ruta, `public/index.html <script> #${inline}`, esModulo);
+    revisar(ruta, `public/index.html <script> #${inline}${esModulo ? ' (module)' : ''}`);
   }
   fs.rmSync(tmp, { recursive: true, force: true });
   if (inline) console.warn(`aviso: ${inline} <script> inline en public/index.html; el CSP del servidor solo permite script-src 'self'`);

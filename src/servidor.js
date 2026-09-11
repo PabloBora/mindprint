@@ -22,7 +22,7 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, pro
   app.use((req, res, next) => {
     // En producción todo va por https: la cookie de sesión jamás viaja en claro.
     // Localhost (npm run dev, pruebas) queda fuera porque no hay proxy TLS.
-    if (produccion && !req.secure) return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+    if (produccion && !req.secure) return res.redirect(308, `https://${req.hostname}${req.originalUrl}`);
     if (produccion) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
