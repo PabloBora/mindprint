@@ -62,8 +62,11 @@
   function diasHasta(ymd) { if (!ymd) return null; const a = new Date(`${hoy()}T00:00:00`); const b = new Date(`${ymd}T00:00:00`); return Math.round((b - a) / 86400000); }
   function semanaDe(inicio) { if (!inicio) return null; const d = new Date(`${inicio}T00:00:00`); if (Number.isNaN(d.getTime())) return null; return Math.max(0, Math.floor((Date.now() - d.getTime()) / (7 * 86400000))); }
   function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2800); }
-  const nombre = (p) => (PERSONAS[p] ? PERSONAS[p].nombre : RESP[p] || '');
-  const avatar = (p, extra = '') => (p && (PERSONAS[p] || p === 'todos') ? `<span class="av ${esc(p)} ${extra}" title="${esc(nombre(p))}">${p === 'todos' ? '3' : esc(nombre(p)[0])}</span>` : '');
+  const ligaSegura = (u) => typeof u === 'string' && /^https?:\/\/[^\s]+$/i.test(u.trim());
+  /* Después de entrar, nombres y roles vienen del servidor; antes (pantalla de entrada) se usa la copia local. */
+  const P = () => (S.estado && S.estado.personas) || PERSONAS;
+  const nombre = (p) => (P()[p] ? P()[p].nombre : RESP[p] || '');
+  const avatar = (p, extra = '') => (p && (P()[p] || p === 'todos') ? `<span class="av ${esc(p)} ${extra}" title="${esc(nombre(p))}">${p === 'todos' ? '3' : esc(nombre(p)[0])}</span>` : '');
 
   /* ---------- red ---------- */
   async function api(metodo, ruta, cuerpo) {
@@ -145,9 +148,12 @@
     const a = document.activeElement; if (!a || !root.contains(a) || !a.dataset || !(a.dataset.bind || a.dataset.keep)) return null;
     return { key: a.dataset.bind || a.dataset.keep, s: a.selectionStart, e: a.selectionEnd, value: a.value };
   }
+  const esCampoTexto = (el) => el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !['checkbox', 'radio', 'date', 'number'].includes(el.type));
   function restoreFocus(root, k) {
     if (!k) return; const el = root.querySelector(`[data-bind="${k.key}"],[data-keep="${k.key}"]`); if (!el) return;
-    if (el.dataset.keep && el.value !== k.value) el.value = k.value;
+    // Lo que la persona está tecleando manda sobre lo que llegó del servidor: un cambio remoto
+    // a media frase no le borra el texto (su guardado pendiente lo enviará en <1 s).
+    if (esCampoTexto(el) && el.value !== k.value) el.value = k.value;
     el.focus({ preventScroll: true }); try { if (k.s != null && el.setSelectionRange) el.setSelectionRange(k.s, k.e); } catch { /* no aplica */ }
   }
   function render() {
@@ -170,7 +176,7 @@
     return `<div class="entrada"><div class="card-e">
       <h1 class="mark">Mindprint <small>tablero</small></h1>
       <p>Aquí trabajan tres personas. Se entra con una liga personal, sin contraseña.</p>
-      <div class="personas">${Object.keys(PERSONAS).map((p) => `<div class="persona">${avatar(p, 'lg')}<span class="nom">${esc(PERSONAS[p].nombre)}</span><span class="rol">${esc(PERSONAS[p].rol)}</span></div>`).join('')}</div>
+      <div class="personas">${Object.keys(P()).map((p) => `<div class="persona">${avatar(p, 'lg')}<span class="nom">${esc(P()[p].nombre)}</span><span class="rol">${esc(P()[p].rol)}</span></div>`).join('')}</div>
       <form data-act="entrar"><input class="in" id="liga" data-keep="liga" placeholder="Pega tu liga personal" autocomplete="off" required><button class="btn primary" type="submit">Entrar</button></form>
       ${S.errEntrada ? `<div class="err">${esc(S.errEntrada)}</div>` : ''}
       <div class="ayuda">Pablo te la mandó por privado. Si ya habías entrado en este navegador y ves esto, tu sesión venció (dura 90 días): vuelve a abrir tu liga.</div>
@@ -180,7 +186,7 @@
   /* ---- cabecera y pestañas ---- */
   function viewHeader() {
     const me = yo();
-    const otros = Object.keys(PERSONAS).filter((p) => p !== me);
+    const otros = Object.keys(P()).filter((p) => p !== me);
     const cx = { conectando: ['', 'conectando…'], live: ['on', 'en vivo'], poll: ['warn', 'actualizando cada 10 s'], bad: ['bad', 'sin conexión'] }[S.conexion] || ['', ''];
     const online = (p) => (S.enLinea.includes(p) ? '<i class="on"></i>' : '');
     return `<header class="top" id="cabecera">
@@ -208,7 +214,7 @@
     let h = '<div class="panel">';
     h += '<form class="addform" data-act="add-idea"><input class="in" id="idea-new" data-keep="idea-new" placeholder="Una idea en una frase. El resto se llena después. (tecla n)" maxlength="140" autocomplete="off" required><button class="btn primary" type="submit">Agregar idea</button></form>';
     h += `<div class="sub"><span><b>${ideas.length}</b> ideas</span><span><b>${cand}</b> candidatas</span><span><b>${eleg}</b> elegidas</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span>Se ordenan por votos y luego por criterios.</span></div>`;
-    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${S.fAutor === 'todos'}">Todas</button>${Object.keys(PERSONAS).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${S.fAutor === p}">${avatar(p)}${esc(PERSONAS[p].nombre)}</button>`).join('')}</div><input class="in search" id="q" data-keep="q" placeholder="Buscar en las ideas" value="${esc(S.q)}" aria-label="Buscar"></div>`;
+    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${S.fAutor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${S.fAutor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><input class="in search" id="q" data-keep="q" placeholder="Buscar en las ideas" value="${esc(S.q)}" aria-label="Buscar"></div>`;
     h += `<div class="stagebar chips">${STAGES.map((s) => `<button class="chip" data-act="stage" data-s="${s[0]}" aria-pressed="${S.stage === s[0]}">${s[1]} <span class="tag">${visibles.filter((i) => i.etapa === s[0]).length}</span></button>`).join('')}</div>`;
     if (!ideas.length) h += '<div class="empty"><b>Todavía no hay ideas.</b> Escribe la primera arriba: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente. Cada quien tiene 3 votos para empujar las que más le laten.</div>';
     h += '<div class="board">';
@@ -222,7 +228,7 @@
   function cardIdea(i) {
     const c = i.criterios || {}; const rc = reaccCount(i); const v = i.votos || {};
     const rx = REACC.filter((r) => rc[r[0]]).map((r) => `${rc[r[0]]} ${r[1].toLowerCase()}`).join(' · ');
-    const voters = Object.keys(PERSONAS).filter((p) => v[p]);
+    const voters = Object.keys(P()).filter((p) => v[p]);
     return `<div class="card" role="button" tabindex="0" draggable="true" data-act="open" data-id="${esc(i.id)}">
       <div class="t">${esc(i.titulo || '(sin título)')}</div>
       ${i.dolor ? `<div class="d">${esc(i.dolor)}</div>` : ''}
@@ -248,10 +254,10 @@
     h += `<div class="field"><label>Cómo sabríamos que vale</label><textarea class="in" rows="2" ${B('validacion')} placeholder="La señal del cliente que nos haría seguir">${esc(i.validacion)}</textarea></div>`;
     h += `<div class="field"><label>Notas</label><textarea class="in" rows="2" ${B('notas')}>${esc(i.notas)}</textarea></div>`;
     h += '</div><div class="side">';
-    h += `<div class="field"><label>Quién la propone</label><select class="in" ${B('autor')}><option value="">—</option>${Object.keys(PERSONAS).map((p) => `<option value="${p}"${i.autor === p ? ' selected' : ''}>${esc(PERSONAS[p].nombre)}</option>`).join('')}</select></div>`;
+    h += `<div class="field"><label>Quién la propone</label><select class="in" ${B('autor')}><option value="">—</option>${Object.keys(P()).map((p) => `<option value="${p}"${i.autor === p ? ' selected' : ''}>${esc(P()[p].nombre)}</option>`).join('')}</select></div>`;
     h += `<div class="field"><label>Tus votos en esta idea</label><div class="votebox"><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="-1"${mine <= 0 ? ' disabled' : ''}>−</button><span class="num">${mine}</span><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="1"${quedan <= 0 ? ' disabled' : ''}>+</button><span class="tag">te quedan ${quedan} · total ▲ ${votosIdea(i)}</span></div>`;
-    const voters = Object.keys(PERSONAS).filter((p) => v[p]);
-    h += `<div class="voters">${voters.length ? voters.map((p) => `<span>${avatar(p, 'sm')}${esc(PERSONAS[p].nombre)} ${v[p]}</span>`).join('') : '<span class="tag">nadie ha votado</span>'}</div></div>`;
+    const voters = Object.keys(P()).filter((p) => v[p]);
+    h += `<div class="voters">${voters.length ? voters.map((p) => `<span>${avatar(p, 'sm')}${esc(P()[p].nombre)} ${v[p]}</span>`).join('') : '<span class="tag">nadie ha votado</span>'}</div></div>`;
     h += `<div class="field"><label>Criterios</label>${CRIT.map((k) => `<div class="critrow"><span>${k[1]}</span><div class="seg l2">${[['0', 'no', ''], ['1', 'algo', 'w'], ['2', 'sí', 'g']].map((o) => `<button type="button" class="${o[2]}" data-act="crit" data-id="${esc(i.id)}" data-k="${k[0]}" data-v="${o[0]}" aria-pressed="${String(c[k[0]] || 0) === o[0]}">${o[1]}</button>`).join('')}</div></div>`).join('')}</div>`;
     const rc = reaccCount(i); const rxs = REACC.filter((x) => rc[x[0]]).map((x) => `${x[1]} ${rc[x[0]]}`).join(' · ');
     h += `<div class="field"><label>Tu reacción</label><div class="chips">${REACC.map((x) => `<button type="button" class="chip" data-act="reacc" data-id="${esc(i.id)}" data-r="${x[0]}" aria-pressed="${r[me] === x[0]}">${x[1]}</button>`).join('')}</div>${rxs ? `<span class="tag">${esc(rxs)}</span>` : ''}</div>`;
@@ -272,7 +278,7 @@
       + `<select class="in" id="tarea-fase" aria-label="Fase">${Object.entries(FASES).map(([k, n]) => `<option value="${k}"${it.fase === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`
       + '<input class="in" type="date" id="tarea-vence" aria-label="Vence">'
       + '<button class="btn primary" type="submit">Agregar</button></form>';
-    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fresp" data-v="mias" aria-pressed="${S.fResp === 'mias'}">Mías</button><button class="chip" data-act="fresp" data-v="todas" aria-pressed="${S.fResp === 'todas'}">Todas</button>${Object.keys(PERSONAS).map((p) => `<button class="chip" data-act="fresp" data-v="${p}" aria-pressed="${S.fResp === p}">${avatar(p)}${esc(PERSONAS[p].nombre)}</button>`).join('')}</div>`
+    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fresp" data-v="mias" aria-pressed="${S.fResp === 'mias'}">Mías</button><button class="chip" data-act="fresp" data-v="todas" aria-pressed="${S.fResp === 'todas'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fresp" data-v="${p}" aria-pressed="${S.fResp === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div>`
       + `<div class="seg">${[['abiertas', 'Abiertas'], ['todas', 'Todas'], ['hechas', 'Hechas']].map(([k, n]) => `<button type="button" data-act="festado" data-v="${k}" aria-pressed="${S.fEstado === k}">${n}</button>`).join('')}</div></div>`;
     let list = S.estado.tareas.slice();
     if (S.fResp === 'mias') list = list.filter(esMia);
@@ -324,11 +330,11 @@
       + `<div class="field"><label>Demo al cliente (objetivo)</label><input class="in" type="date" ${B('demo')} value="${esc(it.demo)}"></div>`
       + `<div class="field"><label>Sincronía semanal</label><input class="in" ${B('sincronia')} value="${esc(it.sincronia)}" placeholder="día y hora, 30 min"></div>`
       + `<div class="field"><label>Canal del día a día</label><input class="in" ${B('canal')} value="${esc(it.canal)}" placeholder="WhatsApp, Slack…"></div>`
-      + Object.keys(PERSONAS).map((k) => `<div class="field"><label>Dedicación · ${esc(PERSONAS[k].nombre)}</label><input class="in" ${B(`dedicacion.${k}`)} value="${esc((it.dedicacion || {})[k])}" placeholder="h por semana"></div>`).join('')
+      + Object.keys(P()).map((k) => `<div class="field"><label>Dedicación · ${esc(P()[k].nombre)}</label><input class="in" ${B(`dedicacion.${k}`)} value="${esc((it.dedicacion || {})[k])}" placeholder="h por semana"></div>`).join('')
       + `<div class="field"><label>Número de iteración</label><input class="in" type="number" min="1" ${B('numero')} value="${esc(it.numero || 1)}"></div>`
       + '</div></div>';
     h += '<div style="display:grid;gap:16px">';
-    h += `<div class="box"><h2>Artefactos<small>uno por fase</small></h2><div>${ARTEF.map((a) => { const x = (it.artefactos || {})[a[0]] || {}; return `<div class="art${x.hecho ? ' ok' : ''}"><input type="checkbox" ${B(`artefactos.${a[0]}.hecho`)}${x.hecho ? ' checked' : ''} aria-label="${a[1]}"><span class="name">${a[1]}<span class="tag">${FASES[a[2]]}</span>${x.liga ? `<a href="${esc(x.liga)}" target="_blank" rel="noopener">abrir</a>` : ''}</span><input class="in" ${B(`artefactos.${a[0]}.liga`)} value="${esc(x.liga)}" placeholder="liga"></div>`; }).join('')}</div></div>`;
+    h += `<div class="box"><h2>Artefactos<small>uno por fase</small></h2><div>${ARTEF.map((a) => { const x = (it.artefactos || {})[a[0]] || {}; return `<div class="art${x.hecho ? ' ok' : ''}"><input type="checkbox" ${B(`artefactos.${a[0]}.hecho`)}${x.hecho ? ' checked' : ''} aria-label="${a[1]}"><span class="name">${a[1]}<span class="tag">${FASES[a[2]]}</span>${ligaSegura(x.liga) ? `<a href="${esc(x.liga)}" target="_blank" rel="noopener">abrir</a>` : ''}</span><input class="in" ${B(`artefactos.${a[0]}.liga`)} value="${esc(x.liga)}" placeholder="liga"></div>`; }).join('')}</div></div>`;
     h += `<div class="box"><h2>Decisiones<small>seguir · ajustar · descartar</small></h2>`
       + `<form data-act="add-dec" style="display:grid;gap:8px"><div class="seg">${TIPOS_DEC.map(([k, n]) => `<button type="button" data-act="tipodec" data-v="${k}" aria-pressed="${S.tipoDec === k}">${n}</button>`).join('')}</div><textarea class="in" id="dec-new" data-keep="dec-new" rows="2" placeholder="Qué decidimos y por qué, en una o dos líneas" required></textarea><div><button class="btn primary sm" type="submit">Registrar decisión</button></div></form>`;
     const decs = (it.decisiones || []).slice().reverse();
