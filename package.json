@@ -1,0 +1,20 @@
+{
+  "name": "tablero-mindprint",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tablero de seguimiento del equipo Mindprint: ideas, tareas e iteración",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "DATA_BACKEND=memory DATA_FILE=.datos-dev.json MP_SECRET=secreto-de-desarrollo MP_TOKENS=pablo:dev-token-pablo-0001,max:dev-token-max-000001,daniel:dev-token-daniel-01 node --watch src/servidor.js",
+    "start": "node src/servidor.js",
+    "test": "node --test test/*.test.js",
+    "check": "node scripts/check.mjs",
+    "tokens": "node scripts/generar-tokens.mjs",
+    "importar": "node scripts/importar.mjs"
+  },
+  "dependencies": {
+    "@google-cloud/firestore": "^7",
+    "express": "^5"
+  }
+}

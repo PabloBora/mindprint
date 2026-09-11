@@ -1,0 +1,7 @@
+node_modules/
+.env
+.env.*
+!.env.example
+.datos-dev.json
+*.log
+.DS_Store
