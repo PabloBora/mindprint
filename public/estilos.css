@@ -319,8 +319,6 @@ span.check{cursor:default}
 .comentarios .composer{margin-top:8px}
 
 /* ---- R2d: prospectos y embudo ---- */
-.col[data-kind="prospecto"].empty .cards::after{content:"arrastra un prospecto aquí"}
-@media (max-width:900px){.col[data-kind="prospecto"].empty .cards::after{content:"nada en esta etapa"}}
 .card.prospecto .d .k{margin-right:4px}
 .seg.wrap{flex-wrap:wrap;align-items:center;gap:0}
 .seg.wrap .k{padding:0 10px}
@@ -331,3 +329,4 @@ span.check{cursor:default}
 .senales label{display:flex;gap:8px;align-items:center;font-size:13px;line-height:1.3}
 .senales input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none}
 .col[data-kind="prospecto"].empty .cards::after{content:"arrastra a alguien aquí"}
+@media (max-width:900px){.col[data-kind="prospecto"].empty .cards::after{content:"nadie en esta etapa"}}
