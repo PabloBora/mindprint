@@ -18,7 +18,7 @@
   const ARTEF = [['oportunidad', 'Oportunidad elegida, con razón', 'elegir'], ['proceso_tipo', 'Mapa del proceso tipo (varias empresas)', 'entender'], ['solucion', 'Solución rápida en una frase, y qué queda fuera', 'entender'], ['prototipo', 'Prototipo con medición de uso', 'construir'], ['demo_doc', 'Demo interna y documentación breve', 'construir'], ['usuarios', 'Usuarios de prueba elegidos', 'validar'], ['senales', 'Señales de tracción registradas', 'validar'], ['costos', 'Costo por ejecución medido', 'validar'], ['decision', 'Decisión de cierre: productizar / ajustar / descartar', 'decidir']];
   const ETAPAS_P = [['candidato', 'Candidato'], ['contactado', 'Contactado'], ['probando', 'Probando'], ['jala', 'Jala'], ['descartado', 'Descartado']];
   const SENALES = [['prueba', 'La prueba sin que insistamos'], ['repite', 'La vuelve a usar por su cuenta'], ['pide', 'Pide algo más'], ['recomienda', 'La recomienda o preguntan por ella'], ['pagaria', 'Pagaría algo por uso']];
-  const TIPOS_DEC = [['seguir', 'Seguir'], ['ajustar', 'Ajustar'], ['descartar', 'Descartar'], ['otra', 'Otra']];
+  const TIPOS_DEC = [['seguir', 'Productizar'], ['ajustar', 'Ajustar'], ['descartar', 'Descartar'], ['otra', 'Otra']];
   const VOTOS_MAX = 3;
   const semanasDe = (it) => (it && it.semanas) || 6;
   const PROVOCACIONES = [
@@ -315,7 +315,7 @@
     let h = '<div class="panel">';
     h += `<section class="hero"><div class="top-line"><h2>Iteración ${esc(it.numero || 1)} · <span class="fase">${esc(FASES[it.fase] || it.fase)}</span></h2><div class="facts">`
       + `<span>${sem != null ? `semana <b>${sem}</b> de ${SEM}` : '<b>sin fecha de inicio</b>'}</span>`
-      + `<span>${dDemo == null ? 'demo <b>sin fecha</b>' : dDemo < 0 ? `demo hace <b>${-dDemo} d</b>` : dDemo === 0 ? 'demo <b>hoy</b>' : `demo en <b>${dDemo} d</b> (${fmtDia(it.demo)})`}</span>`
+      + `<span>${dDemo == null ? 'prueba <b>sin fecha</b>' : dDemo < 0 ? `prueba hace <b>${-dDemo} d</b>` : dDemo === 0 ? 'prueba <b>hoy</b>' : `prueba en <b>${dDemo} d</b> (${fmtDia(it.demo)})`}</span>`
       + `<span>sincronía <b>${esc(it.sincronia || 'por definir')}</b></span><span>canal <b>${esc(it.canal || 'por definir')}</b></span></div></div>`
       + `<div class="bar"><i style="width:${pct}%"></i></div>`
       + `<div class="mini-steps">${PHASES.map((p, i) => `<button type="button" data-act="ir" data-tab="iter" class="${i < idx ? 'done' : ''}${i === idx ? 'now' : ''}" title="Ir a Iteración">${p[1]}</button>`).join('')}</div></section>`;
@@ -549,12 +549,12 @@
     const SEM = semanasDe(it); const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEM) * 100));
     const dDemo = diasHasta(it.demo);
     let h = '<div class="panel"><div class="grid2">';
-    h += `<div class="box"><h2>Iteración ${esc(it.numero || 1)}<small>${FASES[it.fase] || it.fase}${sem != null ? ` · semana ${sem} de ${SEM}` : ' · sin fecha de inicio'}${dDemo != null ? (dDemo < 0 ? ` · la demo fue hace ${-dDemo} d` : dDemo === 0 ? ' · la demo es hoy' : ` · ${dDemo} d para la demo`) : ''}</small></h2>`;
-    h += `<div><div class="bar"><i style="width:${pct}%"></i></div><div class="barlbl"><span>${it.inicio ? `inicio ${fmtDia(it.inicio)}` : 'pon la fecha de inicio'}</span><span>${it.demo ? `demo ${fmtDia(it.demo)}` : `${SEM} semanas`}</span></div></div>`;
+    h += `<div class="box"><h2>Iteración ${esc(it.numero || 1)}<small>${FASES[it.fase] || it.fase}${sem != null ? ` · semana ${sem} de ${SEM}` : ' · sin fecha de inicio'}${dDemo != null ? (dDemo < 0 ? ` · la prueba fue hace ${-dDemo} d` : dDemo === 0 ? ' · la prueba es hoy' : ` · ${dDemo} d para la prueba`) : ''}</small></h2>`;
+    h += `<div><div class="bar"><i style="width:${pct}%"></i></div><div class="barlbl"><span>${it.inicio ? `inicio ${fmtDia(it.inicio)}` : 'pon la fecha de inicio'}</span><span>${it.demo ? `prueba ${fmtDia(it.demo)}` : `${SEM} semanas`}</span></div></div>`;
     h += `<div class="stepper">${PHASES.map((p, i) => `<button type="button" class="step${i < idx ? ' done' : ''}${i === idx ? ' now' : ''}" data-act="fase" data-f="${p[0]}"><span>${p[1]}</span><small>${p[2]}</small></button>`).join('')}</div>`;
     h += '<div class="datos">'
       + `<div class="field"><label>Inicio</label><input class="in" type="date" ${B('inicio')} value="${esc(it.inicio)}"></div>`
-      + `<div class="field"><label>Demo al cliente (objetivo)</label><input class="in" type="date" ${B('demo')} value="${esc(it.demo)}"></div>`
+      + `<div class="field"><label>Prueba con usuarios (fecha objetivo)</label><input class="in" type="date" ${B('demo')} value="${esc(it.demo)}"></div>`
       + `<div class="field"><label>Sincronía semanal</label><input class="in" ${B('sincronia')} value="${esc(it.sincronia)}" placeholder="día y hora, 30 min"></div>`
       + `<div class="field"><label>Canal del día a día</label><input class="in" ${B('canal')} value="${esc(it.canal)}" placeholder="WhatsApp, Slack…"></div>`
       + Object.keys(P()).map((k) => `<div class="field"><label>Dedicación · ${esc(P()[k].nombre)}</label><input class="in" ${B(`dedicacion.${k}`)} value="${esc((it.dedicacion || {})[k])}" placeholder="h por semana"></div>`).join('')
@@ -563,10 +563,10 @@
       + '</div></div>';
     h += '<div style="display:grid;gap:16px">';
     h += `<div class="box"><h2>Artefactos<small>uno por fase</small></h2><div>${ARTEF.map((a) => { const x = (it.artefactos || {})[a[0]] || {}; return `<div class="art${x.hecho ? ' ok' : ''}"><input type="checkbox" ${B(`artefactos.${a[0]}.hecho`)}${x.hecho ? ' checked' : ''} aria-label="${a[1]}"><span class="name">${a[1]}<span class="tag">${FASES[a[2]]}</span>${ligaSegura(x.liga) ? `<a href="${esc(x.liga)}" target="_blank" rel="noopener">abrir</a>` : ''}</span><input class="in" ${B(`artefactos.${a[0]}.liga`)} value="${esc(x.liga)}" placeholder="liga"></div>`; }).join('')}</div></div>`;
-    h += `<div class="box"><h2>Decisiones<small>seguir · ajustar · descartar</small></h2>`
+    h += `<div class="box"><h2>Decisiones<small>productizar · ajustar · descartar</small></h2>`
       + `<form data-act="add-dec" style="display:grid;gap:8px"><div class="seg">${TIPOS_DEC.map(([k, n]) => `<button type="button" data-act="tipodec" data-v="${k}" aria-pressed="${S.tipoDec === k}">${n}</button>`).join('')}</div><textarea class="in" id="dec-new" data-keep="dec-new" rows="2" placeholder="Qué decidimos y por qué, en una o dos líneas" required></textarea><div><button class="btn primary sm" type="submit">Registrar decisión</button></div></form>`;
     const decs = (it.decisiones || []).slice().reverse();
-    h += `<div class="dec">${decs.length ? decs.map((d) => `<div class="item ${esc(d.tipo || 'otra')}"><span class="k">${fmtFechaHora(d.fecha)}${d.quien ? ` · ${esc(nombre(d.quien))}` : ''} · ${esc(d.tipo || 'otra')}</span>${esc(d.texto)}</div>`).join('') : '<span class="tag">todavía ninguna</span>'}</div></div>`;
+    h += `<div class="dec">${decs.length ? decs.map((d) => `<div class="item ${esc(d.tipo || 'otra')}"><span class="k">${fmtFechaHora(d.fecha)}${d.quien ? ` · ${esc(nombre(d.quien))}` : ''} · ${esc((TIPOS_DEC.find((t) => t[0] === d.tipo) || [])[1] || 'otra')}</span>${esc(d.texto)}</div>`).join('') : '<span class="tag">todavía ninguna</span>'}</div></div>`;
     h += `<div class="box"><h2>Provocación</h2><p class="prov">${esc(PROVOCACIONES[S.prov % PROVOCACIONES.length])}</p><div><button class="btn sm" type="button" data-act="prov">Otra</button></div></div>`;
     h += '</div></div></div>';
     return h;
