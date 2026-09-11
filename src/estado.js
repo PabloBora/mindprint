@@ -3,7 +3,7 @@
 // así el tope de votos y la caché nunca se cruzan entre peticiones concurrentes.
 import crypto from 'node:crypto';
 import { PERSONAS } from './auth.js';
-import { validarIdea, validarTarea, validarIteracion, validarMensaje, iteracionInicial, VOTOS_MAX, MENSAJES_MAX, ErrorConflicto, ErrorValidacion, ErrorProhibido } from './validar.js';
+import { validarIdea, validarTarea, validarProspecto, validarIteracion, validarMensaje, iteracionInicial, VOTOS_MAX, MENSAJES_MAX, ErrorConflicto, ErrorValidacion, ErrorProhibido } from './validar.js';
 
 const ACTIVIDAD_MAX = 100;
 const ahora = () => new Date().toISOString();
@@ -12,7 +12,7 @@ const nuevoId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 20);
 export function crearEstado(datos) {
   // `version` es un marcador de "algo cambió". Arranca en Date.now() para que un reinicio o
   // redeploy nunca la haga bajar; los clientes comparan con !== (no confíes en +1 exacto).
-  const st = { version: Date.now(), ideas: new Map(), tareas: new Map(), mensajes: [], iteracion: iteracionInicial(), actividad: [], cargado: false };
+  const st = { version: Date.now(), ideas: new Map(), tareas: new Map(), prospectos: new Map(), mensajes: [], iteracion: iteracionInicial(), actividad: [], cargado: false };
   const clientes = new Set(); // { res, persona }
   let cola = Promise.resolve();
   const enSerie = (fn) => { const p = cola.then(fn, fn); cola = p.catch(() => {}); return p; };
@@ -21,6 +21,7 @@ export function crearEstado(datos) {
     const t = await datos.cargarTodo();
     st.ideas = new Map(t.ideas.filter((d) => d && d.id).map((d) => [d.id, d]));
     st.tareas = new Map(t.tareas.filter((d) => d && d.id).map((d) => [d.id, d]));
+    st.prospectos = new Map((Array.isArray(t.prospectos) ? t.prospectos : []).filter((d) => d && d.id).map((d) => [d.id, d]));
     st.iteracion = t.iteracion ? validarIteracion(t.iteracion) : iteracionInicial();
     st.actividad = Array.isArray(t.actividad) ? t.actividad.slice(0, ACTIVIDAD_MAX) : [];
     st.mensajes = (Array.isArray(t.mensajes) ? t.mensajes : []).filter((d) => d && d.id && d.fecha).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))).slice(-MENSAJES_MAX);
@@ -36,6 +37,7 @@ export function crearEstado(datos) {
       personas: PERSONAS,
       ideas: [...st.ideas.values()],
       tareas: [...st.tareas.values()],
+      prospectos: [...st.prospectos.values()],
       mensajes: st.mensajes,
       iteracion: st.iteracion,
       actividad: st.actividad,
@@ -106,6 +108,26 @@ export function crearEstado(datos) {
     bump();
     return true;
   });
+  const guardarProspecto = (cuerpo, persona) => enSerie(async () => {
+    const limpio = validarProspecto(cuerpo);
+    const previo = st.prospectos.get(limpio.id);
+    const doc = { ...limpio, creado: previo?.creado || limpio.creado || ahora(), actualizado: ahora(), actualizadoPor: persona };
+    await datos.guardar('prospectos', doc.id, doc);
+    st.prospectos.set(doc.id, doc);
+    const accion = !previo ? 'crea' : previo.etapa !== doc.etapa ? 'mueve' : 'edita';
+    await registrar({ quien: persona, accion, objeto: 'prospecto', id: doc.id, titulo: doc.empresa, ...(accion === 'mueve' ? { detalle: doc.etapa } : {}) });
+    bump();
+    return doc;
+  });
+  const borrarProspecto = (id, persona) => enSerie(async () => {
+    const previo = st.prospectos.get(id);
+    if (!previo) return false;
+    await datos.borrar('prospectos', id);
+    st.prospectos.delete(id);
+    await registrar({ quien: persona, accion: 'borra', objeto: 'prospecto', id, titulo: previo.empresa });
+    bump();
+    return true;
+  });
   const guardarIteracion = (cuerpo, persona) => enSerie(async () => {
     const doc = validarIteracion(cuerpo);
     const previa = st.iteracion;
@@ -123,9 +145,9 @@ export function crearEstado(datos) {
   const guardarMensaje = (cuerpo, persona) => enSerie(async () => {
     const limpio = validarMensaje(cuerpo);
     if (limpio.ref) {
-      const item = limpio.ref.tipo === 'idea' ? st.ideas.get(limpio.ref.id) : st.tareas.get(limpio.ref.id);
+      const item = limpio.ref.tipo === 'idea' ? st.ideas.get(limpio.ref.id) : limpio.ref.tipo === 'tarea' ? st.tareas.get(limpio.ref.id) : st.prospectos.get(limpio.ref.id);
       if (!item) throw new ErrorValidacion('ref_invalida', 'La referencia apunta a algo que ya no existe');
-      limpio.ref.titulo = String(item.titulo || '').slice(0, 160);
+      limpio.ref.titulo = String(item.titulo || item.empresa || '').slice(0, 160);
     }
     const doc = { id: nuevoId(), fecha: ahora(), quien: persona, texto: limpio.texto, ref: limpio.ref };
     await datos.guardar('mensajes', doc.id, doc);
@@ -155,5 +177,5 @@ export function crearEstado(datos) {
     req.on('close', () => { clearInterval(ping); clientes.delete(cliente); emitir('presencia', { enLinea: enLinea() }); });
   }
 
-  return { st, cargar, snapshot, guardarIdea, borrarIdea, guardarTarea, borrarTarea, guardarIteracion, guardarMensaje, borrarMensaje, conectarSSE, enLinea };
+  return { st, cargar, snapshot, guardarIdea, borrarIdea, guardarTarea, borrarTarea, guardarProspecto, borrarProspecto, guardarIteracion, guardarMensaje, borrarMensaje, conectarSSE, enLinea };
 }

@@ -2,7 +2,7 @@
 import { Firestore } from '@google-cloud/firestore';
 import { MENSAJES_MAX } from '../validar.js';
 
-const COLS = { ideas: 'ideas', tareas: 'tareas', mensajes: 'mensajes' };
+const COLS = { ideas: 'ideas', tareas: 'tareas', prospectos: 'prospectos', mensajes: 'mensajes' };
 
 export function crearFirestore({ projectId } = {}) {
   const db = new Firestore(projectId ? { projectId } : {});
@@ -11,14 +11,15 @@ export function crearFirestore({ projectId } = {}) {
   return {
     nombre: 'firestore',
     async cargarTodo() {
-      const [ideas, tareas, mensajes, iter, act] = await Promise.all([
-        db.collection(COLS.ideas).get(), db.collection(COLS.tareas).get(),
+      const [ideas, tareas, prospectos, mensajes, iter, act] = await Promise.all([
+        db.collection(COLS.ideas).get(), db.collection(COLS.tareas).get(), db.collection(COLS.prospectos).get(),
         db.collection(COLS.mensajes).orderBy('fecha', 'desc').limit(MENSAJES_MAX).get(),
         docIter.get(), docAct.get(),
       ]);
       return {
         ideas: ideas.docs.map((d) => d.data()),
         tareas: tareas.docs.map((d) => d.data()),
+        prospectos: prospectos.docs.map((d) => d.data()),
         mensajes: mensajes.docs.map((d) => d.data()).reverse(),
         iteracion: iter.exists ? iter.data() : null,
         actividad: act.exists ? (act.data().items || []) : [],
