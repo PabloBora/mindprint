@@ -27,6 +27,8 @@ test('app.js parsea con node --check y solo habla con el mismo origen', () => {
   execFileSync(process.execPath, ['--check', path.join(PUBLIC, 'app.js')], { stdio: 'pipe' });
   assert.doesNotMatch(js, /https?:\/\/(?!docs\.google\.com|drive\.google\.com)/, 'solo ligas al Doc y a Drive; el API es relativo');
   for (const ruta of ['/api/estado', '/api/eventos', '/api/ideas/', '/api/tareas/', '/api/iteracion', '/entrar/', '/salir']) assert.ok(js.includes(ruta), `usa ${ruta}`);
+  for (const tab of ['hoy', 'tareas', 'ideas', 'iter', 'actividad']) assert.ok(js.includes(`['${tab}', `), `pestaña ${tab}`);
+  for (const fn of ['function viewHoy', 'function viewTareas', 'function renderDlgTarea', 'function viewIdeas', 'function viewIter', 'function viewActividad']) assert.ok(js.includes(fn), fn);
 });
 
 test('estilos.css: paleta completa en :root y los dos bloques de tema oscuro', () => {

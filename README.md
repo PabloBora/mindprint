@@ -26,6 +26,11 @@ servidor solo permite `script-src 'self'`, así que no hay scripts inline. La in
 se conecta a `/api/eventos` (SSE) y, si eso falla, sondea cada 10 s. Sin sesión muestra la pantalla de
 entrada (pegar la liga personal).
 
+Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, el equipo, pendientes de
+la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre y diálogo de edición) ·
+**Ideas** (tablero por etapa con votos y criterios) · **Iteración** (fases, datos, artefactos, decisiones) ·
+**Actividad** (todo lo que pasó, por día).
+
 ## Configuración
 
 | Variable | Qué es |
