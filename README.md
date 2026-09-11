@@ -26,14 +26,14 @@ servidor solo permite `script-src 'self'`, así que no hay scripts inline. La in
 se conecta a `/api/eventos` (SSE) y, si eso falla, sondea cada 10 s. Sin sesión muestra la pantalla de
 entrada (pegar la liga personal).
 
-Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, prospectos en juego, el
-equipo, pendientes de la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre y diálogo) ·
-**Prospectos** (el embudo comercial del Plan Maestro: selección → descubrimiento → caso de negocio →
-propuesta → piloto → conversión o descartado; diálogo con contacto, razón, dolor, baseline y siguiente paso) ·
-**Casos de uso** (tablero por etapa con votos y criterios; colección `ideas`) · **Chat** (mensajes del equipo con no leídos, menciones
-`@nombre`, ligas auto-enlazadas y referencias clicables) · **Iteración** (fases, datos, artefactos, decisiones) ·
-**Actividad** (todo lo que pasó, por día). Los diálogos de tarea e idea llevan al pie su hilo de comentarios,
-que son mensajes con referencia y también salen en el Chat.
+Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, usuarios de prueba en
+juego, el equipo, pendientes de la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre
+y diálogo) · **Usuarios de prueba** (colección `prospectos`: gente cercana con la que se valida; etapas
+candidato → contactado → probando → jala o descartado; diálogo con cómo lo conocemos, qué probó y las
+cinco señales de que se vende sola) · **Oportunidades** (colección `ideas`: tablero por etapa Detectada →
+Explorada → Candidata → Elegida, con votos y los cuatro criterios del Plan) · **Chat** · **Iteración**
+(fases Detectar, Explorar, Construir, Probar, Decidir; los nueve entregables del Plan v0.3) · **Actividad**.
+Los diálogos llevan al pie su hilo de comentarios.
 
 ## Configuración
 
@@ -71,8 +71,8 @@ Todo bajo `/api/*` exige la cookie; sin ella responde `401 {"error":"sin_sesion"
 - `PUT /api/ideas/:id` · `DELETE /api/ideas/:id` — el servidor valida, sella `actualizado`/`actualizadoPor`
   y aplica el tope de 3 votos por persona (`409 {"error":"sin_votos"}`).
 - `PUT /api/tareas/:id` · `DELETE /api/tareas/:id` · `PUT /api/prospectos/:id` · `DELETE /api/prospectos/:id` · `PUT /api/iteracion`
-  (la iteración lleva `semanas` 4–8 y los 9 artefactos del Plan Maestro: caso, prospecto, mapa, caso_negocio, demo,
-  doc_interna, propuesta, costos, decision)
+  (la iteración lleva `semanas` 4–8 y los 9 artefactos del Plan v0.3: oportunidad, proceso_tipo, solucion, prototipo,
+  demo_doc, usuarios, senales, costos, decision; los prospectos llevan `senales` y `relacion`)
 - `POST /api/mensajes` `{texto, ref?}` → `201 {ok, version, doc}` (chat sin `ref`; comentario con `ref: {tipo: idea|tarea|prospecto, id}`,
   el servidor rellena `titulo`; ref a algo inexistente → 400) · `DELETE /api/mensajes/:id` (solo el autor; ajeno → `403 {"error":"ajeno"}`).
   `GET /api/estado` trae `mensajes[]` (últimos 500, ascendente).
