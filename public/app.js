@@ -78,7 +78,7 @@
     return j;
   }
   function mensajeError(e) {
-    if (e.code === 'sin_votos') return `Ya usaste tus ${VOTOS_MAX} votos. Quita uno de otra idea para votar esta.`;
+    if (e.code === 'sin_votos') return `Ya usaste tus ${VOTOS_MAX} votos. Quita uno de otro caso para votar este.`;
     if (e.code === 'titulo_requerido') return 'Falta el título.';
     if (e.status >= 500 || !e.status) return 'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.';
     return e.message;
@@ -161,7 +161,7 @@
     const app = document.getElementById('app');
     const keep = captureFocus(app);
     if (S.sinSesion) { app.innerHTML = viewEntrada(); restoreFocus(app, keep); return; }
-    if (!S.estado) { app.innerHTML = S.conexion === 'bad' ? '<div class="empty"><b>No se pudo cargar el tablero.</b> Revisa tu conexión; se reintenta solo cada 10 segundos.</div>' : '<div class="empty">Cargando el tablero…</div>'; return; }
+    if (!S.estado) { app.innerHTML = S.conexion === 'bad' ? '<div class="vacio"><b>No se pudo cargar el tablero.</b> Revisa tu conexión; se reintenta solo cada 10 segundos.</div>' : '<div class="vacio">Cargando el tablero…</div>'; return; }
     const log0 = document.getElementById('chat-log'); const abajo = !log0 || (log0.scrollHeight - log0.scrollTop - log0.clientHeight < 80); const scrollPrev = log0 ? log0.scrollTop : 0;
     app.innerHTML = viewHeader() + viewTabs() + viewPanel() + viewFoot();
     restoreFocus(app, keep);
@@ -218,9 +218,9 @@
     let h = '<div class="panel">';
     h += '<form class="addform" data-act="add-idea"><input class="in" id="idea-new" data-keep="idea-new" placeholder="Un caso de uso en una frase: qué proceso automatizaríamos. El resto se llena después. (tecla n)" maxlength="140" autocomplete="off" required><button class="btn primary" type="submit">Agregar caso</button></form>';
     h += `<div class="sub"><span><b>${ideas.length}</b> casos</span><span><b>${cand}</b> candidatas</span><span><b>${eleg}</b> elegidas</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span>Se ordenan por votos y luego por criterios.</span></div>`;
-    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${S.fAutor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${S.fAutor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><input class="in search" id="q" data-keep="q" placeholder="Buscar en las ideas" value="${esc(S.q)}" aria-label="Buscar"></div>`;
+    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${S.fAutor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${S.fAutor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><input class="in search" id="q" data-keep="q" placeholder="Buscar en los casos" value="${esc(S.q)}" aria-label="Buscar"></div>`;
     h += `<div class="stagebar chips">${STAGES.map((s) => `<button class="chip" data-act="stage" data-s="${s[0]}" aria-pressed="${S.stage === s[0]}">${s[1]} <span class="tag">${visibles.filter((i) => i.etapa === s[0]).length}</span></button>`).join('')}</div>`;
-    if (!ideas.length) h += '<div class="empty"><b>Todavía no hay casos de uso.</b> Escribe el primero arriba: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente. Cada quien tiene 3 votos para empujar los que más le laten.</div>';
+    if (!ideas.length) h += '<div class="vacio"><b>Todavía no hay casos de uso.</b> Escribe el primero arriba: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente. Cada quien tiene 3 votos para empujar los que más le laten.</div>';
     h += '<div class="board">';
     for (const [k, label] of STAGES) {
       const items = visibles.filter((i) => i.etapa === k).sort(sortIdeas);
@@ -337,7 +337,7 @@
     const bloqueadas = S.estado.tareas.filter((t) => t.estado === 'bloqueada');
     h += `<section class="box"><h2>Pendiente de la fase <span class="n">${esc(FASES[it.fase] || it.fase)}</span></h2><div class="lista">`
       + (artFase.length ? artFase.map((a) => { const x = (it.artefactos || {})[a[0]] || {}; return `<div class="item-t${x.hecho ? ' hecha' : ''}"><span class="check${x.hecho ? ' on' : ''}" aria-hidden="true">✓</span><div><button class="tit" type="button" data-act="ir" data-tab="iter">${esc(a[1])}</button><div class="tags">${x.hecho ? '<span class="pill ok">hecho</span>' : '<span class="tag">artefacto de la fase</span>'}${ligaSegura(x.liga) ? `<a href="${esc(x.liga)}" target="_blank" rel="noopener">abrir</a>` : ''}</div></div></div>`; }).join('') : '<div class="hint">Esta fase no tiene artefacto propio.</div>')
-      + `<div class="item-t"><span class="check${eleg ? ' on' : ''}" aria-hidden="true">✓</span><div><button class="tit" type="button" data-act="ir" data-tab="ideas">Ideas: ${cand} candidata${cand === 1 ? '' : 's'}, ${eleg} elegida${eleg === 1 ? '' : 's'}</button><div class="tags"><span class="tag">${S.estado.ideas.length} en total</span></div></div></div>`
+      + `<div class="item-t"><span class="check${eleg ? ' on' : ''}" aria-hidden="true">✓</span><div><button class="tit" type="button" data-act="ir" data-tab="ideas">Casos de uso: ${cand} candidato${cand === 1 ? '' : 's'}, ${eleg} elegido${eleg === 1 ? '' : 's'}</button><div class="tags"><span class="tag">${S.estado.ideas.length} en total</span></div></div></div>`
       + (bloqueadas.length ? `<div class="item-t"><span class="check alert" aria-hidden="true">!</span><div><button class="tit" type="button" data-act="ir" data-tab="tareas">${bloqueadas.length} tarea${bloqueadas.length === 1 ? '' : 's'} bloqueada${bloqueadas.length === 1 ? '' : 's'}</button><div class="tags">${bloqueadas.slice(0, 3).map((t) => `<span class="pill bad">${esc(t.titulo)}</span>`).join('')}</div></div></div>` : '')
       + '</div></section>';
     const acts = (S.estado.actividad || []).slice(0, 8);
@@ -362,7 +362,7 @@
     if (S.fResp === 'mias') list = list.filter(esMia);
     else if (S.fResp !== 'todas') list = list.filter((t) => t.responsable === S.fResp || t.responsable === 'todos');
     if (S.fFase !== 'todas') list = list.filter((t) => t.fase === S.fFase);
-    if (!S.estado.tareas.length) h += '<div class="empty"><b>Sin tareas todavía.</b> Anota lo que alguien tiene que hacer, con responsable y fecha si la hay. Arrastra las tarjetas entre columnas conforme avancen.</div>';
+    if (!S.estado.tareas.length) h += '<div class="vacio"><b>Sin tareas todavía.</b> Anota lo que alguien tiene que hacer, con responsable y fecha si la hay. Arrastra las tarjetas entre columnas conforme avancen.</div>';
     h += `<div class="stagebar chips">${ESTADOS.map((s) => `<button class="chip" data-act="colt" data-v="${s[0]}" aria-pressed="${S.colT === s[0]}">${s[1]} <span class="tag">${list.filter((t) => t.estado === s[0]).length}</span></button>`).join('')}</div>`;
     h += '<div class="board t4">';
     for (const [k, label] of ESTADOS) {
@@ -383,7 +383,7 @@
       + `<div class="t">${esc(t.titulo)}</div>`
       + (t.detalle ? `<div class="d">${esc(t.detalle)}</div>` : '')
       + (t.estado === 'bloqueada' && t.motivo ? `<div class="motivo">${esc(t.motivo)}</div>` : '')
-      + `<div class="meta">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${pillVence(t)}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<span class="tag" title="${esc(idea.titulo)}">idea</span>` : ''}${comentariosDe('tarea', t.id).length ? `<span class="tag">${comentariosDe('tarea', t.id).length} coment.</span>` : ''}</div></div>`;
+      + `<div class="meta">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${pillVence(t)}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<span class="tag" title="${esc(idea.titulo)}">caso</span>` : ''}${comentariosDe('tarea', t.id).length ? `<span class="tag">${comentariosDe('tarea', t.id).length} coment.</span>` : ''}</div></div>`;
   }
   function renderDlgTarea() {
     const dlg = document.getElementById('dlg'); const t = tareaById(S.openTarea);
@@ -400,7 +400,7 @@
     h += `<div class="field"><label>Responsable</label><select class="in" ${B('responsable')}>${Object.entries(RESP).map(([k, n]) => `<option value="${k}"${t.responsable === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`;
     h += `<div class="field"><label>Fase</label><select class="in" ${B('fase')}>${Object.entries(FASES).map(([k, n]) => `<option value="${k}"${t.fase === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`;
     h += `<div class="field"><label>Vence</label><input class="in" type="date" ${B('vence')} value="${esc(t.vence)}"></div>`;
-    h += `<div class="field"><label>Idea relacionada</label><select class="in" ${B('ideaId')}><option value="">—</option>${ideas.map((i) => `<option value="${esc(i.id)}"${t.ideaId === i.id ? ' selected' : ''}>${esc(i.titulo)}</option>`).join('')}</select></div>`;
+    h += `<div class="field"><label>Caso de uso relacionado</label><select class="in" ${B('ideaId')}><option value="">—</option>${ideas.map((i) => `<option value="${esc(i.id)}"${t.ideaId === i.id ? ' selected' : ''}>${esc(i.titulo)}</option>`).join('')}</select></div>`;
     h += '</div>';
     h += `<div class="foot"><span>creada ${fmtFechaHora(t.creado)}${t.actualizadoPor ? ` · editada por ${esc(nombre(t.actualizadoPor))} ${relTiempo(t.actualizado)}` : ''}</span><span><button class="btn quiet danger sm" type="button" data-act="del-tarea" data-id="${esc(t.id)}">Eliminar</button> <button class="btn sm" type="button" data-act="close">Cerrar</button></span></div>`;
     h += '</div>';
@@ -440,7 +440,7 @@
     h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="frespp" data-v="todas" aria-pressed="${S.fRespP === 'todas'}">Todos</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="frespp" data-v="${p}" aria-pressed="${S.fRespP === p}">${avatar(p)}${esc(nombre(p))}</button>`).join('')}</div><span class="hint">Un prospecto nuevo al mes, propuesta al cierre del mes, seguimiento a quien muestre interés. Si no hay urgencia, datos, valor medible ni disposición a pagar: se descarta pronto.</span></div>`;
     let list = S.estado.prospectos.slice();
     if (S.fRespP !== 'todas') list = list.filter((p) => p.responsable === S.fRespP || p.responsable === 'todos');
-    if (!S.estado.prospectos.length) h += '<div class="empty"><b>Todavía no hay prospectos.</b> Agrega el primero arriba con la empresa; después abre la tarjeta para anotar contacto, área, por qué lo elegimos, el dolor y el siguiente paso con fecha.</div>';
+    if (!S.estado.prospectos.length) h += '<div class="vacio"><b>Todavía no hay prospectos.</b> Agrega el primero arriba con la empresa; después abre la tarjeta para anotar contacto, área, por qué lo elegimos, el dolor y el siguiente paso con fecha.</div>';
     h += `<div class="stagebar chips">${ETAPAS_P.map((e) => `<button class="chip" data-act="colp" data-v="${e[0]}" aria-pressed="${S.colP === e[0]}">${e[1]} <span class="tag">${list.filter((p) => p.etapa === e[0]).length}</span></button>`).join('')}</div>`;
     h += '<div class="scroll-x"><div class="board p7">';
     for (const [k, label] of ETAPAS_P) {
@@ -508,7 +508,7 @@
     const items = mensajes();
     if (items.length) { const ultimo = items[items.length - 1].fecha; if (String(ultimo) > String(S.leido || '')) { S.leido = ultimo; lsSet('mp.chat.leido', ultimo); } }
     let h = '<div class="panel chat"><div class="chat-log" id="chat-log">';
-    if (!items.length) h += '<div class="empty"><b>Todavía nadie escribe.</b> Este chat es de los tres. Los comentarios que dejen en una tarea o idea también aparecen aquí, con su referencia.</div>';
+    if (!items.length) h += '<div class="vacio"><b>Todavía nadie escribe.</b> Este chat es de los tres. Los comentarios que dejen en una tarea o idea también aparecen aquí, con su referencia.</div>';
     let dia = '';
     for (const m of items) { const d = diaDe(m.fecha); if (d !== dia) { dia = d; h += `<div class="day">${esc(etiquetaDia(d))}</div>`; } h += itemMsg(m, false); }
     h += '</div>';
@@ -571,7 +571,7 @@
   /* ---- actividad ---- */
   function viewActividad() {
     const items = S.estado.actividad || [];
-    if (!items.length) return '<div class="panel"><div class="empty"><b>Aún no pasa nada.</b> Aquí queda quién creó, movió o decidió qué, para no perder el hilo entre sesiones.</div></div>';
+    if (!items.length) return '<div class="panel"><div class="vacio"><b>Aún no pasa nada.</b> Aquí queda quién creó, movió o decidió qué, para no perder el hilo entre sesiones.</div></div>';
     let h = '<div class="panel"><div class="feed">'; let dia = '';
     for (const a of items) {
       const d = diaDe(a.fecha); if (d !== dia) { dia = d; h += `<div class="day">${esc(etiquetaDia(d))}</div>`; }

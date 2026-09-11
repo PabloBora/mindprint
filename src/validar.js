@@ -130,7 +130,7 @@ export function validarMensaje(b) {
   let ref = null;
   if (src.ref != null && src.ref !== '') {
     const r = objeto(src.ref);
-    if (!REF_TIPOS.includes(r.tipo)) falla('ref_invalida', 'ref.tipo debe ser idea o tarea');
+    if (!REF_TIPOS.includes(r.tipo)) falla('ref_invalida', `ref.tipo debe ser ${REF_TIPOS.join(', ')}`);
     ref = { tipo: r.tipo, id: idValido(r.id), titulo: texto(r.titulo, 160) };
   }
   return { texto: cuerpo, ref };

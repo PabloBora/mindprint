@@ -122,8 +122,8 @@ textarea.in{resize:vertical;min-height:38px;line-height:1.4}
 .tag{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted)}
 .pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;font-family:var(--mono)}
 .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.soft{background:var(--surface-2);color:var(--ink-2)}
-.empty{color:var(--muted);font-size:14px;padding:22px 4px;line-height:1.5;max-width:60ch}
-.empty b{color:var(--ink)}
+.vacio{color:var(--muted);font-size:14px;padding:22px 4px;line-height:1.5;max-width:60ch}
+.vacio b{color:var(--ink)}
 .banner{background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--r);padding:8px 12px;font-size:13px;margin-bottom:12px}
 
 /* tablero de ideas */
