@@ -1,8 +1,8 @@
 // Backend Firestore (modo Native). Credenciales por ADC: en Cloud Run, la cuenta del servicio.
 import { Firestore } from '@google-cloud/firestore';
+import { MENSAJES_MAX } from '../validar.js';
 
 const COLS = { ideas: 'ideas', tareas: 'tareas', mensajes: 'mensajes' };
-const MENSAJES_CARGA = 500;
 
 export function crearFirestore({ projectId } = {}) {
   const db = new Firestore(projectId ? { projectId } : {});
@@ -13,7 +13,7 @@ export function crearFirestore({ projectId } = {}) {
     async cargarTodo() {
       const [ideas, tareas, mensajes, iter, act] = await Promise.all([
         db.collection(COLS.ideas).get(), db.collection(COLS.tareas).get(),
-        db.collection(COLS.mensajes).orderBy('fecha', 'desc').limit(MENSAJES_CARGA).get(),
+        db.collection(COLS.mensajes).orderBy('fecha', 'desc').limit(MENSAJES_MAX).get(),
         docIter.get(), docAct.get(),
       ]);
       return {

@@ -447,7 +447,7 @@
       const j = await api('POST', '/api/mensajes', ref ? { texto, ref } : { texto });
       S.estado.mensajes.push(j.doc); S.estado.version = j.version;
       if (!ref || S.tab === 'chat') { S.leido = j.doc.fecha; lsSet('mp.chat.leido', j.doc.fecha); }
-      const ta2 = document.querySelector(`[data-keep="${ta.dataset.keep}"]`); if (ta2) ta2.value = ''; ta.value = '';
+      ta.value = '';
       render();
     } catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } }
   }
