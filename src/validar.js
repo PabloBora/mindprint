@@ -141,7 +141,7 @@ export function validarMensaje(b) {
   return { texto: cuerpo, ref };
 }
 
-/** Prospecto del embudo comercial (Plan Maestro §9.2). */
+/** Usuario de prueba (colección `prospectos`): gente cercana con la que se valida; señales según Plan v0.3 §7. */
 export function validarProspecto(b) {
   const src = objeto(b);
   const empresa = texto(src.empresa, 160).trim();

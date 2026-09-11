@@ -319,8 +319,6 @@ span.check{cursor:default}
 .comentarios .composer{margin-top:8px}
 
 /* ---- R2d: prospectos y embudo ---- */
-.scroll-x{overflow-x:auto;padding-bottom:6px}
-@media (min-width:901px){.board.p7{grid-template-columns:repeat(7,minmax(168px,1fr));min-width:1190px}}
 .col[data-kind="prospecto"].empty .cards::after{content:"arrastra un prospecto aquí"}
 @media (max-width:900px){.col[data-kind="prospecto"].empty .cards::after{content:"nada en esta etapa"}}
 .card.prospecto .d .k{margin-right:4px}
