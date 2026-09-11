@@ -206,3 +206,21 @@ test('prospectos: crear, mover por el embudo, comentar con referencia y borrar',
     assert.equal(r.status, 400);
   } finally { await cerrar(); }
 });
+
+test('lo guardado con versiones anteriores llega migrado al cargar (etapas y criterios viejos)', async () => {
+  const datos = crearMemory();
+  await datos.guardar('prospectos', 'viejo', { id: 'viejo', empresa: 'Acme', etapa: 'descubrimiento', creado: '2026-09-11T10:00:00Z', actualizado: '2026-09-11T10:00:00Z', actualizadoPor: 'max' });
+  await datos.guardar('ideas', 'idea-vieja', { id: 'idea-vieja', titulo: 'Vieja', etapa: 'candidata', criterios: { acceso: 2, dolor: 1, agentizable: 2 }, creado: '2026-09-11T10:00:00Z' });
+  await datos.guardar('tareas', 'rota', { id: 'rota', titulo: '' });
+  const { app } = await crearApp({ secreto: SECRETO, tokens: `pablo:${TOK_PABLO}`, datos });
+  const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const cp = await entrar(base, TOK_PABLO);
+    const est = await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json();
+    assert.equal(est.prospectos[0].etapa, 'contactado'); assert.equal(est.prospectos[0].actualizadoPor, 'max');
+    assert.deepEqual(est.prospectos[0].senales, { prueba: false, repite: false, pide: false, recomienda: false, pagaria: false });
+    assert.deepEqual(est.ideas[0].criterios, { comun: 0, dolor: 1, estandar: 0, construible: 2 });
+    assert.equal(est.tareas.length, 0, 'la tarea sin título se omite sin tumbar el arranque');
+  } finally { await new Promise((r) => server.close(r)); }
+});

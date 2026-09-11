@@ -17,11 +17,22 @@ export function crearEstado(datos) {
   let cola = Promise.resolve();
   const enSerie = (fn) => { const p = cola.then(fn, fn); cola = p.catch(() => {}); return p; };
 
+  // Al cargar, cada documento pasa por su validador: así lo guardado por versiones anteriores
+  // (etapas, criterios o artefactos viejos) llega al cliente ya migrado. Un doc corrupto se omite.
+  function normalizar(lista, validar) {
+    const out = new Map();
+    for (const d of Array.isArray(lista) ? lista : []) {
+      if (!d || !d.id) continue;
+      try { out.set(d.id, { ...validar(d), creado: d.creado || '', actualizado: d.actualizado || '', actualizadoPor: d.actualizadoPor || '' }); }
+      catch (e) { console.error(`documento omitido al cargar (${d.id}): ${e.message}`); }
+    }
+    return out;
+  }
   async function cargar() {
     const t = await datos.cargarTodo();
-    st.ideas = new Map(t.ideas.filter((d) => d && d.id).map((d) => [d.id, d]));
-    st.tareas = new Map(t.tareas.filter((d) => d && d.id).map((d) => [d.id, d]));
-    st.prospectos = new Map((Array.isArray(t.prospectos) ? t.prospectos : []).filter((d) => d && d.id).map((d) => [d.id, d]));
+    st.ideas = normalizar(t.ideas, validarIdea);
+    st.tareas = normalizar(t.tareas, validarTarea);
+    st.prospectos = normalizar(t.prospectos, validarProspecto);
     st.iteracion = t.iteracion ? validarIteracion(t.iteracion) : iteracionInicial();
     st.actividad = Array.isArray(t.actividad) ? t.actividad.slice(0, ACTIVIDAD_MAX) : [];
     st.mensajes = (Array.isArray(t.mensajes) ? t.mensajes : []).filter((d) => d && d.id && d.fecha).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))).slice(-MENSAJES_MAX);
