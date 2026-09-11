@@ -9,7 +9,7 @@ import { crearEstado } from './estado.js';
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(AQUI, '..', 'public');
 
-export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC } = {}) {
+export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, produccion = process.env.NODE_ENV === 'production' } = {}) {
   if (!secreto || secreto.length < 16) throw new Error('MP_SECRET debe tener al menos 16 caracteres');
   const mapaTokens = tokens instanceof Map ? tokens : leerTokens(tokens);
   if (mapaTokens.size === 0) throw new Error('MP_TOKENS no trae ninguna liga válida (persona:token, token ≥ 16 caracteres)');
@@ -20,10 +20,14 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC } = 
   app.set('trust proxy', 1);
   app.disable('x-powered-by');
   app.use((req, res, next) => {
+    // En producción todo va por https: la cookie de sesión jamás viaja en claro.
+    // Localhost (npm run dev, pruebas) queda fuera porque no hay proxy TLS.
+    if (produccion && !req.secure) return res.redirect(301, `https://${req.headers.host}${req.originalUrl}`);
+    if (produccion) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'");
+    res.setHeader('Content-Security-Policy', "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; script-src 'self'; base-uri 'self'; form-action 'self'");
     next();
   });
   app.use(express.json({ limit: '256kb' }));
@@ -34,11 +38,11 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC } = 
   app.get('/entrar/:token', (req, res) => {
     const persona = personaPorToken(mapaTokens, req.params.token);
     if (!persona) return res.status(404).type('html').send(paginaLigaInvalida());
-    res.setHeader('Set-Cookie', cabeceraCookie(crearSesion(persona, secreto), { segura: req.secure }));
+    res.setHeader('Set-Cookie', cabeceraCookie(crearSesion(persona, secreto), { segura: produccion || req.secure }));
     res.redirect(302, '/');
   });
   app.get('/salir', (req, res) => {
-    res.setHeader('Set-Cookie', cabeceraCookie('', { segura: req.secure, maxAgeSegundos: 0 }));
+    res.setHeader('Set-Cookie', cabeceraCookie('', { segura: produccion || req.secure, maxAgeSegundos: 0 }));
     res.redirect(302, '/');
   });
 
@@ -68,9 +72,10 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC } = 
   app.use((req, res) => { if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'no_encontrado' }); res.status(404).type('text').send('No encontrado'); });
   // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {
-    const status = err.status || (err.type === 'entity.parse.failed' ? 400 : 500);
+    const status = err.status || err.statusCode || (err.type === 'entity.parse.failed' ? 400 : 500);
     if (status >= 500) console.error(err);
-    res.status(status).json({ error: err.code || (status === 400 ? 'cuerpo_invalido' : 'error_interno'), detalle: status < 500 ? err.message : undefined });
+    const codigo = err.code && typeof err.code === 'string' && /^[a-z_]+$/.test(err.code) ? err.code : status >= 500 ? 'error_interno' : 'peticion_invalida';
+    res.status(status).json({ error: codigo, detalle: status < 500 ? err.message : undefined });
   });
   return { app, estado };
 }

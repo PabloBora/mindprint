@@ -15,6 +15,10 @@ export const VOTOS_MAX = 3;
 export class ErrorValidacion extends Error {
   constructor(codigo, detalle) { super(detalle || codigo); this.code = codigo; this.status = 400; }
 }
+/** Regla de negocio que choca con el estado actual (p. ej. votos agotados): 409. */
+export class ErrorConflicto extends Error {
+  constructor(codigo, detalle) { super(detalle || codigo); this.code = codigo; this.status = 409; }
+}
 const falla = (c, d) => { throw new ErrorValidacion(c, d); };
 
 const texto = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
@@ -29,7 +33,8 @@ const fechaDia = (v) => {
 const objeto = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
 
 export function idValido(id) {
-  if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) falla('id_invalido', 'id: letras, dígitos, _ o -, máximo 64');
+  // Firestore reserva los ids con forma __x__; se rechazan aquí para que sea 400 y no 500.
+  if (typeof id !== 'string' || !/^(?!__.*__$)[A-Za-z0-9_-]{1,64}$/.test(id)) falla('id_invalido', 'id: letras, dígitos, _ o -, máximo 64, no __reservado__');
   return id;
 }
 

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { crearApp } from '../src/servidor.js';
 import { crearMemory } from '../src/datos/memory.js';
-import { COOKIE } from '../src/auth.js';
+import { COOKIE, firmar } from '../src/auth.js';
 
 const SECRETO = 'secreto-de-prueba-largo-01';
 const TOK_PABLO = 'token-de-pablo-para-prueba-01';
@@ -40,12 +40,14 @@ test('ideas: crear, mover, votar con tope, borrar; actividad y versión avanzan'
   const { base, cerrar } = await arrancar();
   try {
     const cp = await entrar(base, TOK_PABLO); const cm = await entrar(base, TOK_MAX);
+    const v0 = (await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json()).version;
     let r = await fetch(`${base}/api/ideas/i1`, json('PUT', cp, { titulo: 'Conciliar facturas', etapa: 'semilla' }));
-    assert.equal(r.status, 200); let j = await r.json(); assert.equal(j.doc.actualizadoPor, 'pablo'); assert.equal(j.version, 1);
+    assert.equal(r.status, 200); let j = await r.json(); assert.equal(j.doc.actualizadoPor, 'pablo');
+    assert.equal(typeof j.version, 'number'); assert.ok(j.version > v0, 'la versión sube tras escribir');
     r = await fetch(`${base}/api/ideas/i1`, json('PUT', cm, { titulo: 'Conciliar facturas', etapa: 'candidata', votos: { max: 2 } }));
     assert.equal(r.status, 200);
     r = await fetch(`${base}/api/ideas/i2`, json('PUT', cm, { titulo: 'Otra', votos: { max: 2 } }));
-    assert.equal(r.status, 400); j = await r.json(); assert.equal(j.error, 'sin_votos');
+    assert.equal(r.status, 409); j = await r.json(); assert.equal(j.error, 'sin_votos');
     r = await fetch(`${base}/api/ideas/i2`, json('PUT', cm, { titulo: 'Otra', votos: { max: 1 } }));
     assert.equal(r.status, 200);
     r = await fetch(`${base}/api/ideas/x`, json('PUT', cp, { titulo: '' }));
@@ -59,7 +61,13 @@ test('ideas: crear, mover, votar con tope, borrar; actividad y versión avanzan'
     r = await fetch(`${base}/api/ideas/i1`, { method: 'DELETE', headers: { cookie: cp } });
     assert.equal(r.status, 200);
     assert.equal((await fetch(`${base}/api/ideas/i1`, { method: 'DELETE', headers: { cookie: cp } })).status, 404);
-    assert.equal((await fetch(`${base}/api/ideas/i9`, json('PUT', cm, { titulo: 'Con 3', votos: { max: 3 } }))).status, 400);
+    assert.equal((await fetch(`${base}/api/ideas/i9`, json('PUT', cm, { titulo: 'Con 3', votos: { max: 3 } }))).status, 409);
+    // dos PUT concurrentes con votos que juntos rebasan el tope: solo uno pasa (escrituras en serie)
+    const [ra, rb] = await Promise.all([
+      fetch(`${base}/api/ideas/c1`, json('PUT', cp, { titulo: 'C1', votos: { pablo: 2 } })),
+      fetch(`${base}/api/ideas/c2`, json('PUT', cp, { titulo: 'C2', votos: { pablo: 2 } })),
+    ]);
+    assert.deepEqual([ra.status, rb.status].sort(), [200, 409]);
   } finally { await cerrar(); }
 });
 
@@ -110,4 +118,35 @@ test('salir borra la cookie', async () => {
     assert.equal(r.status, 302); assert.match(r.headers.get('set-cookie'), /Max-Age=0/);
     assert.equal((await fetch(`${base}/salud`)).status, 200);
   } finally { await cerrar(); }
+});
+
+test('arranque falla cerrado con secreto corto o sin ligas válidas', async () => {
+  await assert.rejects(() => crearApp({ secreto: 'corto', tokens: `pablo:${TOK_PABLO}`, datos: crearMemory() }), /MP_SECRET/);
+  await assert.rejects(() => crearApp({ secreto: SECRETO, tokens: '', datos: crearMemory() }), /MP_TOKENS/);
+  await assert.rejects(() => crearApp({ secreto: SECRETO, tokens: 'pablo:corto,otro:xxxxxxxxxxxxxxxxxxxx', datos: crearMemory() }), /MP_TOKENS/);
+});
+
+test('una cookie bien firmada pero expirada no abre la API', async () => {
+  const { base, cerrar } = await arrancar();
+  try {
+    const vencida = firmar({ p: 'pablo', exp: Date.now() - 60000 }, SECRETO);
+    const r = await fetch(`${base}/api/estado`, { headers: { cookie: `${COOKIE}=${encodeURIComponent(vencida)}` } });
+    assert.equal(r.status, 401);
+    const ajena = firmar({ p: 'pablo', exp: Date.now() + 60000 }, 'otro-secreto-de-prueba-largo');
+    assert.equal((await fetch(`${base}/api/estado`, { headers: { cookie: `${COOKIE}=${encodeURIComponent(ajena)}` } })).status, 401);
+  } finally { await cerrar(); }
+});
+
+test('en producción: http redirige a https, la cookie lleva Secure y hay HSTS', async () => {
+  const { app } = await crearApp({ secreto: SECRETO, tokens: `pablo:${TOK_PABLO}`, datos: crearMemory(), produccion: true });
+  const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const r1 = await fetch(`${base}/salud`, { redirect: 'manual' });
+    assert.equal(r1.status, 301); assert.match(r1.headers.get('location'), /^https:\/\//);
+    const r2 = await fetch(`${base}/entrar/${TOK_PABLO}`, { redirect: 'manual', headers: { 'x-forwarded-proto': 'https' } });
+    assert.equal(r2.status, 302);
+    assert.match(r2.headers.get('set-cookie'), /Secure/);
+    assert.match(r2.headers.get('strict-transport-security') || '', /max-age=/);
+  } finally { await new Promise((r) => server.close(r)); }
 });
