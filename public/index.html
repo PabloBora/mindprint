@@ -1,1 +1,22 @@
-<!doctype html><meta charset="utf-8"><title>Tablero Mindprint</title><meta name="viewport" content="width=device-width,initial-scale=1"><body style="font-family:system-ui;padding:40px;color:#1B1F3A"><h1>Tablero Mindprint</h1><p>Servidor listo. La interfaz llega en la rebanada R2.</p></body>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tablero Mindprint</title>
+<meta name="description" content="Tablero de seguimiento del equipo Mindprint: ideas, tareas e iteración.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="/estilos.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231B1F3A'/%3E%3Cpath d='M8 23V9h3l5 8 5-8h3v14h-3v-9l-5 8-5-8v9z' fill='%23FFD84D'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="wrap" id="app" aria-live="polite">
+  <div class="empty">Cargando el tablero…</div>
+</div>
+<dialog id="dlg"></dialog>
+<div class="toast" id="toast" role="status"></div>
+<script src="/app.js" defer></script>
+</body>
+</html>

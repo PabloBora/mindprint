@@ -19,6 +19,13 @@ npm test             # pruebas (node:test)
 npm run check        # sintaxis de todo el JS
 ```
 
+## Interfaz
+
+`public/` es HTML + CSS + JS sin build ni dependencias (`index.html`, `estilos.css`, `app.js`). El CSP del
+servidor solo permite `script-src 'self'`, así que no hay scripts inline. La interfaz carga `/api/estado`,
+se conecta a `/api/eventos` (SSE) y, si eso falla, sondea cada 10 s. Sin sesión muestra la pantalla de
+entrada (pegar la liga personal).
+
 ## Configuración
 
 | Variable | Qué es |

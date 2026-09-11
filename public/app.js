@@ -1,0 +1,465 @@
+/* Tablero Mindprint — interfaz. Consume el API del servidor (ver README). Sin dependencias. */
+(() => {
+  'use strict';
+
+  /* ---------- constantes del método (v0.1) ---------- */
+  const PERSONAS = {
+    pablo: { nombre: 'Pablo', rol: 'Tecnología y desarrollo' },
+    max: { nombre: 'Max', rol: 'Procesos' },
+    daniel: { nombre: 'Daniel', rol: 'Cliente y negocio · apoyo en desarrollo' },
+  };
+  const RESP = { pablo: 'Pablo', max: 'Max', daniel: 'Daniel', todos: 'Los tres' };
+  const STAGES = [['semilla', 'Semilla'], ['explorada', 'Explorada'], ['candidata', 'Candidata'], ['elegida', 'Elegida'], ['descartada', 'Descartada']];
+  const PHASES = [['elegir', 'Elegir', 'sem 0–1'], ['entender', 'Entender', 'sem 1–2'], ['construir', 'Construir', 'sem 2–5'], ['validar', 'Presentar y validar', 'sem 5–6'], ['decidir', 'Decidir', 'cierre']];
+  const FASES = Object.fromEntries([['general', 'General'], ...PHASES.map((p) => [p[0], p[1]])]);
+  const ESTADOS = [['en_curso', 'En curso'], ['pendiente', 'Pendiente'], ['bloqueada', 'Bloqueada'], ['hecha', 'Hecha']];
+  const CRIT = [['acceso', 'Acceso al cliente'], ['dolor', 'Dolor claro'], ['agentizable', 'Agentizable']];
+  const REACC = [['late', 'Me late'], ['dudo', 'Dudo'], ['cliente', 'Tengo cliente']];
+  const ARTEF = [['candidatos', 'Lista corta de candidatos', 'elegir'], ['mapa', 'Mapa del proceso (1 pág)', 'entender'], ['mvpdef', 'Definición del MVP (1 pág)', 'entender'], ['mvp', 'El MVP corriendo', 'construir'], ['demo', 'Guion de demo y notas de validación', 'validar'], ['decision', 'Decisión de cierre', 'decidir']];
+  const TIPOS_DEC = [['seguir', 'Seguir'], ['ajustar', 'Ajustar'], ['descartar', 'Descartar'], ['otra', 'Otra']];
+  const VOTOS_MAX = 3;
+  const SEMANAS = 6;
+  const PROVOCACIONES = [
+    '¿Qué proceso repetitivo viste esta semana que alguien hace a mano y nadie cuestiona?',
+    '¿Quién paga hoy, en horas o en dinero, por mover información de un sistema a otro?',
+    '¿Qué cliente ya nos tiene confianza y nos dejaría ver su operación sin ceremonia?',
+    '¿Qué haría un agente que trabaja 24/7 en esa oficina, si solo pudiera leer y proponer?',
+    '¿Dónde se pierde una venta o un cobro porque nadie dio seguimiento a tiempo?',
+    '¿Qué decisión chica se toma cien veces al día con la misma regla?',
+    '¿Qué reporte se arma cada semana copiando y pegando de tres lugares?',
+    '¿Qué pregunta le hacen al dueño diez veces al día que podría responder un agente?',
+    '¿Qué trámite o formato obligatorio se llena siempre con los mismos datos?',
+    '¿Qué proceso ya intentaron automatizar y fracasó? ¿Por qué falló y qué cambió desde entonces?',
+  ];
+
+  /* ---------- estado de la interfaz ---------- */
+  const S = {
+    estado: null, yo: null, enLinea: [], sinSesion: false, conexion: 'conectando', errEntrada: '',
+    tab: lsGet('mp.tab', 'ideas'), stage: 'semilla', fAutor: 'todos', q: '', fResp: lsGet('mp.fresp', 'mias'), fEstado: 'abiertas',
+    openIdea: null, prov: Math.floor(Math.random() * PROVOCACIONES.length), arrastrando: null, tipoDec: 'otra',
+  };
+  let es = null;
+  const timers = {};
+
+  /* ---------- utilidades ---------- */
+  function lsGet(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch { /* sin storage */ } }
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '').slice(0, 20) : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  const pad = (n) => String(n).padStart(2, '0');
+  function hoy() { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function fmtDia(s) { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); return m ? `${parseInt(m[3], 10)} ${MESES[parseInt(m[2], 10) - 1]}` : ''; }
+  function fmtFechaHora(iso) { const d = new Date(iso); if (Number.isNaN(d.getTime())) return ''; return `${d.getDate()} ${MESES[d.getMonth()]} ${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+  function relTiempo(iso) {
+    const d = new Date(iso); if (Number.isNaN(d.getTime())) return '';
+    const s = Math.round((Date.now() - d.getTime()) / 1000);
+    if (s < 45) return 'ahora'; if (s < 3600) return `hace ${Math.max(1, Math.round(s / 60))} min`; if (s < 86400 * 1.5) return `hace ${Math.round(s / 3600)} h`;
+    if (s < 86400 * 7) return `hace ${Math.round(s / 86400)} d`; return `${d.getDate()} ${MESES[d.getMonth()]}`;
+  }
+  function diaDe(iso) { const d = new Date(iso); if (Number.isNaN(d.getTime())) return ''; return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+  function etiquetaDia(ymd) { const h = hoy(); if (ymd === h) return 'Hoy'; const a = new Date(); a.setDate(a.getDate() - 1); if (ymd === diaDe(a.toISOString())) return 'Ayer'; return fmtDia(ymd); }
+  function diasHasta(ymd) { if (!ymd) return null; const a = new Date(`${hoy()}T00:00:00`); const b = new Date(`${ymd}T00:00:00`); return Math.round((b - a) / 86400000); }
+  function semanaDe(inicio) { if (!inicio) return null; const d = new Date(`${inicio}T00:00:00`); if (Number.isNaN(d.getTime())) return null; return Math.max(0, Math.floor((Date.now() - d.getTime()) / (7 * 86400000))); }
+  function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 2800); }
+  const nombre = (p) => (PERSONAS[p] ? PERSONAS[p].nombre : RESP[p] || '');
+  const avatar = (p, extra = '') => (p && (PERSONAS[p] || p === 'todos') ? `<span class="av ${esc(p)} ${extra}" title="${esc(nombre(p))}">${p === 'todos' ? '3' : esc(nombre(p)[0])}</span>` : '');
+
+  /* ---------- red ---------- */
+  async function api(metodo, ruta, cuerpo) {
+    const r = await fetch(ruta, { method: metodo, credentials: 'same-origin', headers: cuerpo ? { 'content-type': 'application/json' } : {}, body: cuerpo ? JSON.stringify(cuerpo) : undefined });
+    if (r.status === 401) { mostrarEntrada(); const e = new Error('sin_sesion'); e.code = 'sin_sesion'; throw e; }
+    let j = null; try { j = await r.json(); } catch { /* sin cuerpo */ }
+    if (!r.ok) { const e = new Error((j && j.detalle) || (j && j.error) || `HTTP ${r.status}`); e.code = (j && j.error) || 'error'; e.status = r.status; throw e; }
+    return j;
+  }
+  function mensajeError(e) {
+    if (e.code === 'sin_votos') return `Ya usaste tus ${VOTOS_MAX} votos. Quita uno de otra idea para votar esta.`;
+    if (e.code === 'titulo_requerido') return 'Falta el título.';
+    if (e.status >= 500 || !e.status) return 'No se pudo guardar. Revisa tu conexión e inténtalo de nuevo.';
+    return e.message;
+  }
+  async function cargarEstado() {
+    try {
+      const j = await api('GET', '/api/estado');
+      S.estado = j; S.yo = j.yo; S.enLinea = j.enLinea || []; S.sinSesion = false;
+      if (S.conexion !== 'live') S.conexion = es && es.readyState === 1 ? 'live' : 'poll';
+      render();
+    } catch (e) { if (e.code !== 'sin_sesion') { S.conexion = 'bad'; render(); } }
+  }
+  function conectarSSE() {
+    if (!('EventSource' in window)) { S.conexion = 'poll'; return; }
+    if (es) es.close();
+    es = new EventSource('/api/eventos');
+    es.addEventListener('hola', (ev) => { S.conexion = 'live'; const v = JSON.parse(ev.data).version; if (!S.estado || v !== S.estado.version) cargarEstado(); else renderHeader(); });
+    es.addEventListener('cambio', (ev) => { const v = JSON.parse(ev.data).version; if (!S.estado || v !== S.estado.version) cargarEstado(); });
+    es.addEventListener('presencia', (ev) => { S.enLinea = JSON.parse(ev.data).enLinea || []; renderHeader(); });
+    es.onerror = () => { if (S.conexion === 'live') { S.conexion = 'poll'; renderHeader(); } };
+  }
+  function mostrarEntrada() {
+    S.sinSesion = true; S.estado = null; S.yo = null;
+    if (es) { es.close(); es = null; }
+    const d = document.getElementById('dlg'); if (d.open) d.close();
+    render();
+  }
+  setInterval(() => { if (S.sinSesion) return; if (!es || es.readyState !== 1) cargarEstado(); }, 10000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && !S.sinSesion) { cargarEstado(); if (es && es.readyState === 2) conectarSSE(); } });
+
+  const sinSellos = (d) => { const o = { ...d }; delete o.actualizado; delete o.actualizadoPor; return o; };
+  function upsert(lista, doc) { const i = lista.findIndex((x) => x.id === doc.id); if (i >= 0) lista[i] = doc; else lista.push(doc); }
+  async function guardarIdea(idea) {
+    try { const j = await api('PUT', `/api/ideas/${encodeURIComponent(idea.id)}`, sinSellos(idea)); upsert(S.estado.ideas, j.doc); S.estado.version = j.version; render(); return true; }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } return false; }
+  }
+  async function borrarIdea(id) {
+    try { const j = await api('DELETE', `/api/ideas/${encodeURIComponent(id)}`); S.estado.ideas = S.estado.ideas.filter((i) => i.id !== id); S.estado.version = j.version; render(); }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } }
+  }
+  async function guardarTarea(t) {
+    try { const j = await api('PUT', `/api/tareas/${encodeURIComponent(t.id)}`, sinSellos(t)); upsert(S.estado.tareas, j.doc); S.estado.version = j.version; render(); return true; }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } return false; }
+  }
+  async function borrarTarea(id) {
+    try { const j = await api('DELETE', `/api/tareas/${encodeURIComponent(id)}`); S.estado.tareas = S.estado.tareas.filter((t) => t.id !== id); S.estado.version = j.version; render(); }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } }
+  }
+  async function guardarIteracion(it) {
+    try { const j = await api('PUT', '/api/iteracion', it); S.estado.iteracion = j.doc; S.estado.version = j.version; render(); return true; }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } return false; }
+  }
+
+  /* ---------- helpers de datos ---------- */
+  const ideaById = (id) => S.estado.ideas.find((i) => i.id === id);
+  const tareaById = (id) => S.estado.tareas.find((t) => t.id === id);
+  const yo = () => (S.yo ? S.yo.persona : '');
+  function votosUsados(p) { return S.estado.ideas.reduce((a, i) => a + ((i.votos || {})[p] || 0), 0); }
+  const votosIdea = (i) => Object.values(i.votos || {}).reduce((a, b) => a + (b || 0), 0);
+  const scoreIdea = (i) => { const c = i.criterios || {}; return (c.acceso || 0) + (c.dolor || 0) + (c.agentizable || 0); };
+  function reaccCount(i) { const out = {}; Object.values(i.reacciones || {}).forEach((v) => { if (v) out[v] = (out[v] || 0) + 1; }); return out; }
+  const sortIdeas = (a, b) => (votosIdea(b) - votosIdea(a)) || (scoreIdea(b) - scoreIdea(a)) || String(a.creado || '').localeCompare(String(b.creado || ''));
+  const esMia = (t) => t.responsable === yo() || t.responsable === 'todos';
+  const vencida = (t) => t.vence && t.estado !== 'hecha' && t.vence < hoy();
+
+  /* ---------- render ---------- */
+  function captureFocus(root) {
+    const a = document.activeElement; if (!a || !root.contains(a) || !a.dataset || !(a.dataset.bind || a.dataset.keep)) return null;
+    return { key: a.dataset.bind || a.dataset.keep, s: a.selectionStart, e: a.selectionEnd, value: a.value };
+  }
+  function restoreFocus(root, k) {
+    if (!k) return; const el = root.querySelector(`[data-bind="${k.key}"],[data-keep="${k.key}"]`); if (!el) return;
+    if (el.dataset.keep && el.value !== k.value) el.value = k.value;
+    el.focus({ preventScroll: true }); try { if (k.s != null && el.setSelectionRange) el.setSelectionRange(k.s, k.e); } catch { /* no aplica */ }
+  }
+  function render() {
+    const app = document.getElementById('app');
+    const keep = captureFocus(app);
+    if (S.sinSesion) { app.innerHTML = viewEntrada(); restoreFocus(app, keep); return; }
+    if (!S.estado) { app.innerHTML = S.conexion === 'bad' ? '<div class="empty"><b>No se pudo cargar el tablero.</b> Revisa tu conexión; se reintenta solo cada 10 segundos.</div>' : '<div class="empty">Cargando el tablero…</div>'; return; }
+    app.innerHTML = viewHeader() + viewTabs() + viewPanel() + viewFoot();
+    restoreFocus(app, keep);
+    if (S.openIdea) renderDlg();
+  }
+  function renderHeader() { const h = document.getElementById('cabecera'); if (h && S.estado) h.outerHTML = viewHeader(); }
+  function viewPanel() { if (S.tab === 'tareas') return viewTareas(); if (S.tab === 'iter') return viewIter(); if (S.tab === 'actividad') return viewActividad(); return viewIdeas(); }
+  function viewFoot() {
+    return '<div class="foot-links"><a href="https://docs.google.com/document/d/1VihQ50vREEp9m3yqD7ek7wDx0Z1pOueF3BC_ICT9JhA/edit" target="_blank" rel="noopener">Doc del método v0.1</a><a href="https://drive.google.com/drive/folders/1RiT2jf0FVqJdx-KTnQBxuYEWU7-CnKW-" target="_blank" rel="noopener">Carpeta Mindprint en Drive</a></div>';
+  }
+
+  /* ---- entrada ---- */
+  function viewEntrada() {
+    return `<div class="entrada"><div class="card-e">
+      <h1 class="mark">Mindprint <small>tablero</small></h1>
+      <p>Aquí trabajan tres personas. Se entra con una liga personal, sin contraseña.</p>
+      <div class="personas">${Object.keys(PERSONAS).map((p) => `<div class="persona">${avatar(p, 'lg')}<span class="nom">${esc(PERSONAS[p].nombre)}</span><span class="rol">${esc(PERSONAS[p].rol)}</span></div>`).join('')}</div>
+      <form data-act="entrar"><input class="in" id="liga" data-keep="liga" placeholder="Pega tu liga personal" autocomplete="off" required><button class="btn primary" type="submit">Entrar</button></form>
+      ${S.errEntrada ? `<div class="err">${esc(S.errEntrada)}</div>` : ''}
+      <div class="ayuda">Pablo te la mandó por privado. Si ya habías entrado en este navegador y ves esto, tu sesión venció (dura 90 días): vuelve a abrir tu liga.</div>
+    </div></div>`;
+  }
+
+  /* ---- cabecera y pestañas ---- */
+  function viewHeader() {
+    const me = yo();
+    const otros = Object.keys(PERSONAS).filter((p) => p !== me);
+    const cx = { conectando: ['', 'conectando…'], live: ['on', 'en vivo'], poll: ['warn', 'actualizando cada 10 s'], bad: ['bad', 'sin conexión'] }[S.conexion] || ['', ''];
+    const online = (p) => (S.enLinea.includes(p) ? '<i class="on"></i>' : '');
+    return `<header class="top" id="cabecera">
+      <h1 class="mark">Mindprint <small>tablero</small></h1>
+      <div class="yo">${avatar(me, 'lg').replace('</span>', `${online(me)}</span>`)}<div><div class="nom">${esc(S.yo.nombre)}</div><div class="rol">${esc(S.yo.rol)}</div></div></div>
+      <div class="equipo">${otros.map((p) => avatar(p, S.enLinea.includes(p) ? '' : 'off').replace('</span>', `${online(p)}</span>`)).join('')}<span>${otros.filter((p) => S.enLinea.includes(p)).map(nombre).join(' y ') || 'nadie más'} en línea</span></div>
+      <div class="right"><span class="sync"><span class="dot ${cx[0]}"></span>${cx[1]}</span><a class="lnk" href="/salir">Salir</a></div>
+    </header>`;
+  }
+  function viewTabs() {
+    const mias = S.estado.tareas.filter((t) => esMia(t) && t.estado !== 'hecha');
+    const hot = mias.some(vencida);
+    const it = S.estado.iteracion;
+    const tabs = [['ideas', 'Ideas', String(S.estado.ideas.length), ''], ['tareas', 'Tareas', String(mias.length), hot ? 'hot' : ''], ['iter', 'Iteración', `#${it.numero} · ${FASES[it.fase] || it.fase}`, ''], ['actividad', 'Actividad', '', '']];
+    return `<nav class="tabs" role="tablist">${tabs.map((t) => `<button class="tab" role="tab" data-act="tab" data-tab="${t[0]}" aria-selected="${S.tab === t[0]}">${t[1]}${t[2] ? `<span class="n ${t[3]}">${esc(t[2])}</span>` : ''}</button>`).join('')}</nav>`;
+  }
+
+  /* ---- ideas ---- */
+  function viewIdeas() {
+    const ideas = S.estado.ideas;
+    const q = S.q.trim().toLowerCase();
+    const visibles = ideas.filter((i) => (S.fAutor === 'todos' || i.autor === S.fAutor) && (!q || `${i.titulo} ${i.dolor} ${i.quien} ${i.agente}`.toLowerCase().includes(q)));
+    const cand = ideas.filter((i) => i.etapa === 'candidata').length; const eleg = ideas.filter((i) => i.etapa === 'elegida').length;
+    const quedan = Math.max(0, VOTOS_MAX - votosUsados(yo()));
+    let h = '<div class="panel">';
+    h += '<form class="addform" data-act="add-idea"><input class="in" id="idea-new" data-keep="idea-new" placeholder="Una idea en una frase. El resto se llena después. (tecla n)" maxlength="140" autocomplete="off" required><button class="btn primary" type="submit">Agregar idea</button></form>';
+    h += `<div class="sub"><span><b>${ideas.length}</b> ideas</span><span><b>${cand}</b> candidatas</span><span><b>${eleg}</b> elegidas</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span>Se ordenan por votos y luego por criterios.</span></div>`;
+    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${S.fAutor === 'todos'}">Todas</button>${Object.keys(PERSONAS).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${S.fAutor === p}">${avatar(p)}${esc(PERSONAS[p].nombre)}</button>`).join('')}</div><input class="in search" id="q" data-keep="q" placeholder="Buscar en las ideas" value="${esc(S.q)}" aria-label="Buscar"></div>`;
+    h += `<div class="stagebar chips">${STAGES.map((s) => `<button class="chip" data-act="stage" data-s="${s[0]}" aria-pressed="${S.stage === s[0]}">${s[1]} <span class="tag">${visibles.filter((i) => i.etapa === s[0]).length}</span></button>`).join('')}</div>`;
+    if (!ideas.length) h += '<div class="empty"><b>Todavía no hay ideas.</b> Escribe la primera arriba: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente. Cada quien tiene 3 votos para empujar las que más le laten.</div>';
+    h += '<div class="board">';
+    for (const [k, label] of STAGES) {
+      const items = visibles.filter((i) => i.etapa === k).sort(sortIdeas);
+      h += `<section class="col${S.stage === k ? ' active' : ''}${items.length ? '' : ' empty'}" data-col="${k}"><h3><span class="${k === 'elegida' ? 'hl' : ''}">${label}</span><span class="n">${items.length}</span></h3><div class="cards">${items.map(cardIdea).join('')}</div></section>`;
+    }
+    h += '</div></div>';
+    return h;
+  }
+  function cardIdea(i) {
+    const c = i.criterios || {}; const rc = reaccCount(i); const v = i.votos || {};
+    const rx = REACC.filter((r) => rc[r[0]]).map((r) => `${rc[r[0]]} ${r[1].toLowerCase()}`).join(' · ');
+    const voters = Object.keys(PERSONAS).filter((p) => v[p]);
+    return `<div class="card" role="button" tabindex="0" draggable="true" data-act="open" data-id="${esc(i.id)}">
+      <div class="t">${esc(i.titulo || '(sin título)')}</div>
+      ${i.dolor ? `<div class="d">${esc(i.dolor)}</div>` : ''}
+      <div class="meta">${i.autor ? avatar(i.autor, 'sm') : ''}
+        <span class="crit" title="acceso · dolor · agentizable">${CRIT.map((k) => `<i class="l${c[k[0]] || 0}"></i>`).join('')}</span>
+        <span class="votos" title="votos">▲ ${votosIdea(i)}${voters.length ? ` <span class="avs">${voters.map((p) => avatar(p, 'sm')).join('')}</span>` : ''}</span>
+        ${rx ? `<span class="rx">${esc(rx)}</span>` : ''}
+      </div></div>`;
+  }
+  function renderDlg() {
+    const dlg = document.getElementById('dlg'); const i = ideaById(S.openIdea);
+    if (!i) { S.openIdea = null; if (dlg.open) dlg.close(); return; }
+    const keep = captureFocus(dlg);
+    const c = i.criterios || {}; const v = i.votos || {}; const r = i.reacciones || {}; const me = yo();
+    const mine = v[me] || 0; const quedan = Math.max(0, VOTOS_MAX - votosUsados(me));
+    const B = (f) => `data-bind="ideas:${esc(i.id)}:${f}"`;
+    let h = '<div class="dlg"><div class="main">';
+    h += `<div class="seg">${STAGES.map((s) => `<button type="button" data-act="etapa" data-id="${esc(i.id)}" data-s="${s[0]}" aria-pressed="${i.etapa === s[0]}">${s[1]}</button>`).join('')}</div>`;
+    h += `<input class="title" ${B('titulo')} value="${esc(i.titulo)}" maxlength="140" aria-label="Título">`;
+    h += `<div class="field"><label>El dolor, en una frase</label><textarea class="in" rows="2" ${B('dolor')} placeholder="Qué duele hoy y a quién">${esc(i.dolor)}</textarea></div>`;
+    h += `<div class="field"><label>Quién lo sufre o quién paga</label><textarea class="in" rows="1" ${B('quien')} placeholder="Rol, tipo de empresa, cliente concreto si lo hay">${esc(i.quien)}</textarea></div>`;
+    h += `<div class="field"><label>Qué haría el agente</label><textarea class="in" rows="2" ${B('agente')} placeholder="Lee, propone, ejecuta… hasta dónde llega">${esc(i.agente)}</textarea></div>`;
+    h += `<div class="field"><label>Cómo sabríamos que vale</label><textarea class="in" rows="2" ${B('validacion')} placeholder="La señal del cliente que nos haría seguir">${esc(i.validacion)}</textarea></div>`;
+    h += `<div class="field"><label>Notas</label><textarea class="in" rows="2" ${B('notas')}>${esc(i.notas)}</textarea></div>`;
+    h += '</div><div class="side">';
+    h += `<div class="field"><label>Quién la propone</label><select class="in" ${B('autor')}><option value="">—</option>${Object.keys(PERSONAS).map((p) => `<option value="${p}"${i.autor === p ? ' selected' : ''}>${esc(PERSONAS[p].nombre)}</option>`).join('')}</select></div>`;
+    h += `<div class="field"><label>Tus votos en esta idea</label><div class="votebox"><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="-1"${mine <= 0 ? ' disabled' : ''}>−</button><span class="num">${mine}</span><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="1"${quedan <= 0 ? ' disabled' : ''}>+</button><span class="tag">te quedan ${quedan} · total ▲ ${votosIdea(i)}</span></div>`;
+    const voters = Object.keys(PERSONAS).filter((p) => v[p]);
+    h += `<div class="voters">${voters.length ? voters.map((p) => `<span>${avatar(p, 'sm')}${esc(PERSONAS[p].nombre)} ${v[p]}</span>`).join('') : '<span class="tag">nadie ha votado</span>'}</div></div>`;
+    h += `<div class="field"><label>Criterios</label>${CRIT.map((k) => `<div class="critrow"><span>${k[1]}</span><div class="seg l2">${[['0', 'no', ''], ['1', 'algo', 'w'], ['2', 'sí', 'g']].map((o) => `<button type="button" class="${o[2]}" data-act="crit" data-id="${esc(i.id)}" data-k="${k[0]}" data-v="${o[0]}" aria-pressed="${String(c[k[0]] || 0) === o[0]}">${o[1]}</button>`).join('')}</div></div>`).join('')}</div>`;
+    const rc = reaccCount(i); const rxs = REACC.filter((x) => rc[x[0]]).map((x) => `${x[1]} ${rc[x[0]]}`).join(' · ');
+    h += `<div class="field"><label>Tu reacción</label><div class="chips">${REACC.map((x) => `<button type="button" class="chip" data-act="reacc" data-id="${esc(i.id)}" data-r="${x[0]}" aria-pressed="${r[me] === x[0]}">${x[1]}</button>`).join('')}</div>${rxs ? `<span class="tag">${esc(rxs)}</span>` : ''}</div>`;
+    h += '</div>';
+    h += `<div class="foot"><span>creada ${fmtFechaHora(i.creado)}${i.actualizadoPor ? ` · editada por ${esc(nombre(i.actualizadoPor))} ${relTiempo(i.actualizado)}` : ''}</span><span><button class="btn quiet danger sm" type="button" data-act="del-idea" data-id="${esc(i.id)}">Eliminar</button> <button class="btn sm" type="button" data-act="close">Cerrar</button></span></div>`;
+    h += '</div>';
+    dlg.innerHTML = h; restoreFocus(dlg, keep);
+    if (!dlg.open) dlg.showModal();
+  }
+
+  /* ---- tareas ---- */
+  function viewTareas() {
+    const me = yo(); const it = S.estado.iteracion;
+    let h = '<div class="panel">';
+    h += '<form class="addform tareas" data-act="add-tarea">'
+      + '<input class="in t" id="tarea-new" data-keep="tarea-new" placeholder="Nueva tarea" maxlength="160" autocomplete="off" required>'
+      + `<select class="in" id="tarea-resp" aria-label="Responsable">${Object.entries(RESP).map(([k, n]) => `<option value="${k}"${k === me ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+      + `<select class="in" id="tarea-fase" aria-label="Fase">${Object.entries(FASES).map(([k, n]) => `<option value="${k}"${it.fase === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+      + '<input class="in" type="date" id="tarea-vence" aria-label="Vence">'
+      + '<button class="btn primary" type="submit">Agregar</button></form>';
+    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fresp" data-v="mias" aria-pressed="${S.fResp === 'mias'}">Mías</button><button class="chip" data-act="fresp" data-v="todas" aria-pressed="${S.fResp === 'todas'}">Todas</button>${Object.keys(PERSONAS).map((p) => `<button class="chip" data-act="fresp" data-v="${p}" aria-pressed="${S.fResp === p}">${avatar(p)}${esc(PERSONAS[p].nombre)}</button>`).join('')}</div>`
+      + `<div class="seg">${[['abiertas', 'Abiertas'], ['todas', 'Todas'], ['hechas', 'Hechas']].map(([k, n]) => `<button type="button" data-act="festado" data-v="${k}" aria-pressed="${S.fEstado === k}">${n}</button>`).join('')}</div></div>`;
+    let list = S.estado.tareas.slice();
+    if (S.fResp === 'mias') list = list.filter(esMia);
+    else if (S.fResp !== 'todas') list = list.filter((t) => t.responsable === S.fResp || t.responsable === 'todos');
+    if (S.fEstado === 'abiertas') list = list.filter((t) => t.estado !== 'hecha');
+    if (S.fEstado === 'hechas') list = list.filter((t) => t.estado === 'hecha');
+    if (!list.length) h += S.estado.tareas.length ? '<div class="empty">Nada con este filtro. Prueba <b>Todas</b> o agrega una tarea arriba.</div>' : '<div class="empty"><b>Sin tareas todavía.</b> Anota lo que alguien tiene que hacer, con responsable y fecha si la hay. Las tuyas y las de los tres aparecen en <b>Mías</b>.</div>';
+    for (const [k, label] of ESTADOS) {
+      const items = list.filter((t) => t.estado === k).sort((a, b) => String(a.vence || '9').localeCompare(String(b.vence || '9')) || String(a.creado || '').localeCompare(String(b.creado || '')));
+      if (!items.length) continue;
+      h += `<section class="group"><h3><span>${label}</span><span class="n">${items.length}</span></h3>`;
+      for (const t of items) {
+        const B = (f) => `data-bind="tareas:${esc(t.id)}:${f}"`;
+        const d = diasHasta(t.vence); const idea = t.ideaId ? ideaById(t.ideaId) : null;
+        let venceTag = '';
+        if (t.vence && t.estado !== 'hecha') venceTag = d < 0 ? `<span class="pill bad">vencida ${fmtDia(t.vence)}</span>` : d === 0 ? '<span class="pill warn">vence hoy</span>' : d === 1 ? '<span class="pill warn">vence mañana</span>' : `<span class="tag">vence ${fmtDia(t.vence)}</span>`;
+        h += `<div class="row ${t.estado}">`
+          + `<button class="check${t.estado === 'hecha' ? ' on' : ''}" type="button" data-act="hecha" data-id="${esc(t.id)}" title="${t.estado === 'hecha' ? 'Reabrir' : 'Marcar hecha'}" aria-label="${t.estado === 'hecha' ? 'Reabrir' : 'Marcar hecha'}">✓</button>`
+          + `<div class="tt"><input class="in t" ${B('titulo')} value="${esc(t.titulo)}" maxlength="160" aria-label="Título">`
+          + `<input class="in d" ${B('detalle')} value="${esc(t.detalle)}" placeholder="Detalle o liga" aria-label="Detalle">`
+          + (t.estado === 'bloqueada' ? `<input class="in d" ${B('motivo')} value="${esc(t.motivo)}" placeholder="Bloqueada por…" aria-label="Motivo">` : '')
+          + `<div class="tags">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${venceTag}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<button class="lnk" type="button" data-act="open" data-id="${esc(idea.id)}">idea: ${esc(idea.titulo)}</button>` : ''}${t.actualizadoPor ? `<span class="tag">· ${esc(nombre(t.actualizadoPor))} ${relTiempo(t.actualizado)}</span>` : ''}</div></div>`
+          + '<div class="ctl">'
+          + `<select class="state ${t.estado}" ${B('estado')} aria-label="Estado">${ESTADOS.map((e) => `<option value="${e[0]}"${t.estado === e[0] ? ' selected' : ''}>${e[1]}</option>`).join('')}</select>`
+          + `<select class="in" ${B('responsable')} aria-label="Responsable">${Object.entries(RESP).map(([k2, n]) => `<option value="${k2}"${t.responsable === k2 ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+          + `<select class="in" ${B('fase')} aria-label="Fase">${Object.entries(FASES).map(([k2, n]) => `<option value="${k2}"${t.fase === k2 ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+          + `<input class="in${vencida(t) ? ' late' : ''}" type="date" ${B('vence')} value="${esc(t.vence)}" aria-label="Vence">`
+          + `<button class="btn quiet danger sm" type="button" data-act="del-tarea" data-id="${esc(t.id)}" aria-label="Eliminar tarea">×</button>`
+          + '</div></div>';
+      }
+      h += '</section>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  /* ---- iteración ---- */
+  function viewIter() {
+    const it = S.estado.iteracion; const B = (f) => `data-bind="iter:actual:${f}"`;
+    const idx = PHASES.findIndex((p) => p[0] === it.fase); const sem = semanaDe(it.inicio);
+    const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEMANAS) * 100));
+    const dDemo = diasHasta(it.demo);
+    let h = '<div class="panel"><div class="grid2">';
+    h += `<div class="box"><h2>Iteración ${esc(it.numero || 1)}<small>${FASES[it.fase] || it.fase}${sem != null ? ` · semana ${sem} de ${SEMANAS}` : ' · sin fecha de inicio'}${dDemo != null ? (dDemo < 0 ? ` · la demo fue hace ${-dDemo} d` : dDemo === 0 ? ' · la demo es hoy' : ` · ${dDemo} d para la demo`) : ''}</small></h2>`;
+    h += `<div><div class="bar"><i style="width:${pct}%"></i></div><div class="barlbl"><span>${it.inicio ? `inicio ${fmtDia(it.inicio)}` : 'pon la fecha de inicio'}</span><span>${it.demo ? `demo ${fmtDia(it.demo)}` : `${SEMANAS} semanas`}</span></div></div>`;
+    h += `<div class="stepper">${PHASES.map((p, i) => `<button type="button" class="step${i < idx ? ' done' : ''}${i === idx ? ' now' : ''}" data-act="fase" data-f="${p[0]}"><span>${p[1]}</span><small>${p[2]}</small></button>`).join('')}</div>`;
+    h += '<div class="datos">'
+      + `<div class="field"><label>Inicio</label><input class="in" type="date" ${B('inicio')} value="${esc(it.inicio)}"></div>`
+      + `<div class="field"><label>Demo al cliente (objetivo)</label><input class="in" type="date" ${B('demo')} value="${esc(it.demo)}"></div>`
+      + `<div class="field"><label>Sincronía semanal</label><input class="in" ${B('sincronia')} value="${esc(it.sincronia)}" placeholder="día y hora, 30 min"></div>`
+      + `<div class="field"><label>Canal del día a día</label><input class="in" ${B('canal')} value="${esc(it.canal)}" placeholder="WhatsApp, Slack…"></div>`
+      + Object.keys(PERSONAS).map((k) => `<div class="field"><label>Dedicación · ${esc(PERSONAS[k].nombre)}</label><input class="in" ${B(`dedicacion.${k}`)} value="${esc((it.dedicacion || {})[k])}" placeholder="h por semana"></div>`).join('')
+      + `<div class="field"><label>Número de iteración</label><input class="in" type="number" min="1" ${B('numero')} value="${esc(it.numero || 1)}"></div>`
+      + '</div></div>';
+    h += '<div style="display:grid;gap:16px">';
+    h += `<div class="box"><h2>Artefactos<small>uno por fase</small></h2><div>${ARTEF.map((a) => { const x = (it.artefactos || {})[a[0]] || {}; return `<div class="art${x.hecho ? ' ok' : ''}"><input type="checkbox" ${B(`artefactos.${a[0]}.hecho`)}${x.hecho ? ' checked' : ''} aria-label="${a[1]}"><span class="name">${a[1]}<span class="tag">${FASES[a[2]]}</span>${x.liga ? `<a href="${esc(x.liga)}" target="_blank" rel="noopener">abrir</a>` : ''}</span><input class="in" ${B(`artefactos.${a[0]}.liga`)} value="${esc(x.liga)}" placeholder="liga"></div>`; }).join('')}</div></div>`;
+    h += `<div class="box"><h2>Decisiones<small>seguir · ajustar · descartar</small></h2>`
+      + `<form data-act="add-dec" style="display:grid;gap:8px"><div class="seg">${TIPOS_DEC.map(([k, n]) => `<button type="button" data-act="tipodec" data-v="${k}" aria-pressed="${S.tipoDec === k}">${n}</button>`).join('')}</div><textarea class="in" id="dec-new" data-keep="dec-new" rows="2" placeholder="Qué decidimos y por qué, en una o dos líneas" required></textarea><div><button class="btn primary sm" type="submit">Registrar decisión</button></div></form>`;
+    const decs = (it.decisiones || []).slice().reverse();
+    h += `<div class="dec">${decs.length ? decs.map((d) => `<div class="item ${esc(d.tipo || 'otra')}"><span class="k">${fmtFechaHora(d.fecha)}${d.quien ? ` · ${esc(nombre(d.quien))}` : ''} · ${esc(d.tipo || 'otra')}</span>${esc(d.texto)}</div>`).join('') : '<span class="tag">todavía ninguna</span>'}</div></div>`;
+    h += `<div class="box"><h2>Provocación</h2><p class="prov">${esc(PROVOCACIONES[S.prov % PROVOCACIONES.length])}</p><div><button class="btn sm" type="button" data-act="prov">Otra</button></div></div>`;
+    h += '</div></div></div>';
+    return h;
+  }
+
+  /* ---- actividad ---- */
+  function viewActividad() {
+    const items = S.estado.actividad || [];
+    if (!items.length) return '<div class="panel"><div class="empty"><b>Aún no pasa nada.</b> Aquí queda quién creó, movió o decidió qué, para no perder el hilo entre sesiones.</div></div>';
+    const OBJ = { idea: 'la idea', tarea: 'la tarea', iteracion: 'la iteración' };
+    const texto = (a) => {
+      const obj = OBJ[a.objeto] || a.objeto; const t = `«${esc(a.titulo || '')}»`;
+      if (a.accion === 'crea') return `creó ${obj} <b>${t}</b>`;
+      if (a.accion === 'borra') return `borró ${obj} <b>${t}</b>`;
+      if (a.accion === 'decide') return `registró una decisión <span class="pill soft">${esc(a.detalle || 'otra')}</span> <b>${t}</b>`;
+      if (a.accion === 'mueve') {
+        const dest = a.objeto === 'idea' ? (STAGES.find((s) => s[0] === a.detalle) || [])[1] : a.objeto === 'tarea' ? (ESTADOS.find((s) => s[0] === a.detalle) || [])[1] : FASES[a.detalle];
+        return a.objeto === 'iteracion' ? `pasó la iteración a <b>${esc(dest || a.detalle)}</b>` : `movió ${obj} <b>${t}</b> a <b>${esc(dest || a.detalle || '')}</b>`;
+      }
+      return `editó ${obj} <b>${t}</b>`;
+    };
+    let h = '<div class="panel"><div class="feed">'; let dia = '';
+    for (const a of items) {
+      const d = diaDe(a.fecha); if (d !== dia) { dia = d; h += `<div class="day">${esc(etiquetaDia(d))}</div>`; }
+      h += `<div class="ev">${avatar(a.quien, 'sm')}<div class="txt"><b>${esc(nombre(a.quien) || '¿?')}</b> ${texto(a)}</div><span class="when" title="${esc(fmtFechaHora(a.fecha))}">${esc(relTiempo(a.fecha))}</span></div>`;
+    }
+    return `${h}</div></div>`;
+  }
+
+  /* ---------- acciones ---------- */
+  document.addEventListener('click', async (e) => {
+    const el = e.target.closest('[data-act]'); if (!el) return;
+    const act = el.dataset.act;
+    if (act === 'tab') { S.tab = el.dataset.tab; lsSet('mp.tab', S.tab); render(); return; }
+    if (act === 'stage') { S.stage = el.dataset.s; render(); return; }
+    if (act === 'fautor') { S.fAutor = el.dataset.v; render(); return; }
+    if (act === 'fresp') { S.fResp = el.dataset.v; lsSet('mp.fresp', S.fResp); render(); return; }
+    if (act === 'festado') { S.fEstado = el.dataset.v; render(); return; }
+    if (act === 'tipodec') { S.tipoDec = el.dataset.v; render(); return; }
+    if (act === 'prov') { S.prov = (S.prov + 1) % PROVOCACIONES.length; render(); return; }
+    if (act === 'open') { S.openIdea = el.dataset.id; if (S.tab !== 'ideas') { S.tab = 'ideas'; lsSet('mp.tab', 'ideas'); render(); } renderDlg(); return; }
+    if (act === 'close') { const d = document.getElementById('dlg'); S.openIdea = null; if (d.open) d.close(); return; }
+    if (!S.estado) return;
+    if (act === 'etapa') { const i = ideaById(el.dataset.id); if (i && i.etapa !== el.dataset.s) await guardarIdea({ ...i, etapa: el.dataset.s }); return; }
+    if (act === 'voto') {
+      const i = ideaById(el.dataset.id); if (!i) return; const d = parseInt(el.dataset.d, 10); const me = yo();
+      const v = { ...(i.votos || {}) }; const cur = v[me] || 0;
+      if (d > 0 && votosUsados(me) >= VOTOS_MAX) { toast(`Ya usaste tus ${VOTOS_MAX} votos`); return; }
+      v[me] = Math.max(0, cur + d); await guardarIdea({ ...i, votos: v }); return;
+    }
+    if (act === 'crit') { const i = ideaById(el.dataset.id); if (!i) return; await guardarIdea({ ...i, criterios: { ...(i.criterios || {}), [el.dataset.k]: parseInt(el.dataset.v, 10) } }); return; }
+    if (act === 'reacc') { const i = ideaById(el.dataset.id); if (!i) return; const me = yo(); const r = { ...(i.reacciones || {}) }; r[me] = r[me] === el.dataset.r ? '' : el.dataset.r; await guardarIdea({ ...i, reacciones: r }); return; }
+    if (act === 'del-idea') { const i = ideaById(el.dataset.id); if (!i) return; if (!confirm(`¿Eliminar la idea "${i.titulo || ''}"? No se puede deshacer.`)) return; S.openIdea = null; document.getElementById('dlg').close(); await borrarIdea(i.id); return; }
+    if (act === 'del-tarea') { const t = tareaById(el.dataset.id); if (!t) return; if (!confirm(`¿Eliminar la tarea "${t.titulo || ''}"?`)) return; await borrarTarea(t.id); return; }
+    if (act === 'hecha') { const t = tareaById(el.dataset.id); if (!t) return; await guardarTarea({ ...t, estado: t.estado === 'hecha' ? 'pendiente' : 'hecha' }); return; }
+    if (act === 'fase') { const it = S.estado.iteracion; if (it.fase !== el.dataset.f) await guardarIteracion({ ...it, fase: el.dataset.f }); return; }
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.closest && e.target.closest('.card[data-act="open"]')) { e.preventDefault(); e.target.closest('.card').click(); return; }
+    if (e.key === 'n' && !e.ctrlKey && !e.metaKey && !e.altKey && S.tab === 'ideas' && S.estado && !S.openIdea) {
+      const a = document.activeElement; if (a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT')) return;
+      const inp = document.getElementById('idea-new'); if (inp) { e.preventDefault(); inp.focus(); }
+    }
+  });
+  document.addEventListener('submit', async (e) => {
+    const f = e.target.closest('form[data-act]'); if (!f) return; e.preventDefault();
+    if (f.dataset.act === 'entrar') {
+      const v = (document.getElementById('liga').value || '').trim();
+      const m = /\/entrar\/([A-Za-z0-9_-]{16,})/.exec(v) || (/^[A-Za-z0-9_-]{16,}$/.test(v) ? [null, v] : null);
+      if (!m) { S.errEntrada = 'Eso no parece una liga del tablero. Debe terminar en /entrar/… seguido de tu clave.'; render(); return; }
+      window.location.href = `/entrar/${m[1]}`; return;
+    }
+    if (!S.estado) return;
+    if (f.dataset.act === 'add-idea') {
+      const inp = document.getElementById('idea-new'); const t = inp.value.trim(); if (!t) return;
+      const ok = await guardarIdea({ id: uid(), titulo: t, dolor: '', quien: '', agente: '', validacion: '', notas: '', autor: yo(), etapa: 'semilla', votos: {}, criterios: {}, reacciones: {} });
+      if (ok) { S.stage = 'semilla'; const i2 = document.getElementById('idea-new'); if (i2) i2.value = ''; render(); toast('Idea agregada en Semilla'); }
+      return;
+    }
+    if (f.dataset.act === 'add-tarea') {
+      const inp = document.getElementById('tarea-new'); const t = inp.value.trim(); if (!t) return;
+      const ok = await guardarTarea({ id: uid(), titulo: t, detalle: '', motivo: '', responsable: document.getElementById('tarea-resp').value, fase: document.getElementById('tarea-fase').value, estado: 'pendiente', vence: document.getElementById('tarea-vence').value || '', ideaId: '' });
+      if (ok) { const i2 = document.getElementById('tarea-new'); if (i2) i2.value = ''; const v2 = document.getElementById('tarea-vence'); if (v2) v2.value = ''; render(); }
+      return;
+    }
+    if (f.dataset.act === 'add-dec') {
+      const ta = document.getElementById('dec-new'); const txt = ta.value.trim(); if (!txt) return;
+      const it = S.estado.iteracion;
+      const ok = await guardarIteracion({ ...it, decisiones: [...(it.decisiones || []), { fecha: new Date().toISOString(), quien: yo(), tipo: S.tipoDec, texto: txt }] });
+      if (ok) { const t2 = document.getElementById('dec-new'); if (t2) t2.value = ''; render(); }
+    }
+  });
+  /* campos enlazados: selects/checkbox/date al cambiar; texto con pausa */
+  function setPath(o, path, v) { const ks = path.split('.'); let cur = o; for (let i = 0; i < ks.length - 1; i++) { if (typeof cur[ks[i]] !== 'object' || cur[ks[i]] === null) cur[ks[i]] = {}; cur = cur[ks[i]]; } cur[ks[ks.length - 1]] = v; }
+  function applyBind(el, inmediato) {
+    if (!S.estado) return;
+    const [col, id, campo] = el.dataset.bind.split(':'); if (!col) return;
+    let val = el.type === 'checkbox' ? el.checked : el.value;
+    if (el.type === 'number') val = parseInt(val, 10) || 1;
+    const run = async () => {
+      if (col === 'ideas') { const i = ideaById(id); if (!i || i[campo] === val) return; await guardarIdea({ ...i, [campo]: val }); }
+      else if (col === 'tareas') { const t = tareaById(id); if (!t || t[campo] === val) return; await guardarTarea({ ...t, [campo]: val }); }
+      else if (col === 'iter') { const it = JSON.parse(JSON.stringify(S.estado.iteracion)); setPath(it, campo, val); await guardarIteracion(it); }
+    };
+    clearTimeout(timers[el.dataset.bind]);
+    if (inmediato) run(); else timers[el.dataset.bind] = setTimeout(run, 600);
+  }
+  document.addEventListener('input', (e) => {
+    const el = e.target; if (!el.dataset) return;
+    if (el.dataset.keep === 'q') { S.q = el.value; clearTimeout(timers.q); timers.q = setTimeout(render, 150); return; }
+    if (!el.dataset.bind || el.tagName === 'SELECT' || el.type === 'checkbox' || el.type === 'date') return;
+    applyBind(el, false);
+  });
+  document.addEventListener('change', (e) => { const el = e.target; if (!el.dataset || !el.dataset.bind) return; applyBind(el, true); });
+  document.getElementById('dlg').addEventListener('close', () => { S.openIdea = null; });
+
+  /* arrastrar tarjetas entre etapas (escritorio) */
+  document.addEventListener('dragstart', (e) => { const c = e.target.closest && e.target.closest('.card[draggable]'); if (!c) return; S.arrastrando = c.dataset.id; c.classList.add('drag'); try { e.dataTransfer.setData('text/plain', c.dataset.id); e.dataTransfer.effectAllowed = 'move'; } catch { /* no aplica */ } });
+  document.addEventListener('dragend', () => { S.arrastrando = null; document.querySelectorAll('.card.drag').forEach((c) => c.classList.remove('drag')); document.querySelectorAll('.col.over').forEach((c) => c.classList.remove('over')); });
+  document.addEventListener('dragover', (e) => { const col = e.target.closest && e.target.closest('.col[data-col]'); if (!col || !S.arrastrando) return; e.preventDefault(); try { e.dataTransfer.dropEffect = 'move'; } catch { /* no aplica */ } document.querySelectorAll('.col.over').forEach((c) => { if (c !== col) c.classList.remove('over'); }); col.classList.add('over'); });
+  document.addEventListener('dragleave', (e) => { const col = e.target.closest && e.target.closest('.col[data-col]'); if (col && !col.contains(e.relatedTarget)) col.classList.remove('over'); });
+  document.addEventListener('drop', async (e) => {
+    const col = e.target.closest && e.target.closest('.col[data-col]'); if (!col || !S.arrastrando) return; e.preventDefault();
+    const i = ideaById(S.arrastrando); const etapa = col.dataset.col; S.arrastrando = null; col.classList.remove('over');
+    if (i && i.etapa !== etapa) { const ok = await guardarIdea({ ...i, etapa }); if (ok) toast(`«${i.titulo}» → ${(STAGES.find((s) => s[0] === etapa) || [])[1]}`); }
+  });
+
+  /* ---------- arranque ---------- */
+  cargarEstado().then(() => { if (!S.sinSesion) conectarSSE(); });
+})();
