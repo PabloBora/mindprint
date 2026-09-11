@@ -317,3 +317,13 @@ span.check{cursor:default}
 .hilo .msg{padding:6px 0;border-bottom:1px solid var(--line)}
 .hilo .msg:last-child{border-bottom:0}
 .comentarios .composer{margin-top:8px}
+
+/* ---- R2d: prospectos y embudo ---- */
+.scroll-x{overflow-x:auto;padding-bottom:6px}
+@media (min-width:901px){.board.p7{grid-template-columns:repeat(7,minmax(168px,1fr));min-width:1190px}}
+.col[data-kind="prospecto"].empty .cards::after{content:"arrastra un prospecto aquí"}
+@media (max-width:900px){.col[data-kind="prospecto"].empty .cards::after{content:"nada en esta etapa"}}
+.card.prospecto .d .k{margin-right:4px}
+.seg.wrap{flex-wrap:wrap;align-items:center;gap:0}
+.seg.wrap .k{padding:0 10px}
+.toolbar .hint{max-width:60ch}
