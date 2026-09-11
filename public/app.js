@@ -260,7 +260,7 @@
     h += seccionComentarios('idea', i.id);
     h += '</div><div class="side">';
     h += `<div class="field"><label>Quién la propone</label><select class="in" ${B('autor')}><option value="">—</option>${Object.keys(P()).map((p) => `<option value="${p}"${i.autor === p ? ' selected' : ''}>${esc(P()[p].nombre)}</option>`).join('')}</select></div>`;
-    h += `<div class="field"><label>Tus votos en esta idea</label><div class="votebox"><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="-1"${mine <= 0 ? ' disabled' : ''}>−</button><span class="num">${mine}</span><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="1"${quedan <= 0 ? ' disabled' : ''}>+</button><span class="tag">te quedan ${quedan} · total ▲ ${votosIdea(i)}</span></div>`;
+    h += `<div class="field"><label>Tus votos en este caso</label><div class="votebox"><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="-1"${mine <= 0 ? ' disabled' : ''}>−</button><span class="num">${mine}</span><button class="btn sm" type="button" data-act="voto" data-id="${esc(i.id)}" data-d="1"${quedan <= 0 ? ' disabled' : ''}>+</button><span class="tag">te quedan ${quedan} · total ▲ ${votosIdea(i)}</span></div>`;
     const voters = Object.keys(P()).filter((p) => v[p]);
     h += `<div class="voters">${voters.length ? voters.map((p) => `<span>${avatar(p, 'sm')}${esc(P()[p].nombre)} ${v[p]}</span>`).join('') : '<span class="tag">nadie ha votado</span>'}</div></div>`;
     h += `<div class="field"><label>Criterios</label>${CRIT.map((k) => `<div class="critrow"><span>${k[1]}</span><div class="seg l2">${[['0', 'no', ''], ['1', 'algo', 'w'], ['2', 'sí', 'g']].map((o) => `<button type="button" class="${o[2]}" data-act="crit" data-id="${esc(i.id)}" data-k="${k[0]}" data-v="${o[0]}" aria-pressed="${String(c[k[0]] || 0) === o[0]}">${o[1]}</button>`).join('')}</div></div>`).join('')}</div>`;
@@ -508,7 +508,7 @@
     const items = mensajes();
     if (items.length) { const ultimo = items[items.length - 1].fecha; if (String(ultimo) > String(S.leido || '')) { S.leido = ultimo; lsSet('mp.chat.leido', ultimo); } }
     let h = '<div class="panel chat"><div class="chat-log" id="chat-log">';
-    if (!items.length) h += '<div class="vacio"><b>Todavía nadie escribe.</b> Este chat es de los tres. Los comentarios que dejen en una tarea o idea también aparecen aquí, con su referencia.</div>';
+    if (!items.length) h += '<div class="vacio"><b>Todavía nadie escribe.</b> Este chat es de los tres. Los comentarios que dejen en una tarea, un caso o un prospecto también aparecen aquí, con su referencia.</div>';
     let dia = '';
     for (const m of items) { const d = diaDe(m.fecha); if (d !== dia) { dia = d; h += `<div class="day">${esc(etiquetaDia(d))}</div>`; } h += itemMsg(m, false); }
     h += '</div>';
