@@ -62,6 +62,12 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, pro
   api.delete('/tareas/:id', async (req, res, next) => {
     try { const ok = await estado.borrarTarea(req.params.id, req.persona); res.status(ok ? 200 : 404).json({ ok, version: estado.st.version }); } catch (e) { next(e); }
   });
+  api.put('/prospectos/:id', async (req, res, next) => {
+    try { const doc = await estado.guardarProspecto({ ...req.body, id: req.params.id }, req.persona); res.json({ ok: true, version: estado.st.version, doc }); } catch (e) { next(e); }
+  });
+  api.delete('/prospectos/:id', async (req, res, next) => {
+    try { const ok = await estado.borrarProspecto(req.params.id, req.persona); res.status(ok ? 200 : 404).json({ ok, version: estado.st.version }); } catch (e) { next(e); }
+  });
   api.put('/iteracion', async (req, res, next) => {
     try { const doc = await estado.guardarIteracion(req.body, req.persona); res.json({ ok: true, version: estado.st.version, doc }); } catch (e) { next(e); }
   });

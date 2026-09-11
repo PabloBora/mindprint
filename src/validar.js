@@ -8,11 +8,14 @@ export const ESTADOS = ['pendiente', 'en_curso', 'bloqueada', 'hecha'];
 export const RESPONSABLES = [...Object.keys(PERSONAS), 'todos'];
 export const REACCIONES = ['', 'late', 'dudo', 'cliente'];
 export const CRITERIOS = ['acceso', 'dolor', 'agentizable'];
-export const ARTEFACTOS = ['candidatos', 'mapa', 'mvpdef', 'mvp', 'demo', 'decision'];
+// Entregables del Plan Maestro v0.2 (§10, §14), uno por fase de la iteración.
+export const ARTEFACTOS = ['caso', 'prospecto', 'mapa', 'caso_negocio', 'demo', 'doc_interna', 'propuesta', 'costos', 'decision'];
+export const ETAPAS_PROSPECTO = ['seleccion', 'descubrimiento', 'caso_negocio', 'propuesta', 'piloto', 'conversion', 'descartado'];
+export const SEMANAS_DEFAULT = 6;
 export const TIPOS_DECISION = ['seguir', 'ajustar', 'descartar', 'otra'];
 export const VOTOS_MAX = 3;
 export const MENSAJES_MAX = 500;
-export const REF_TIPOS = ['idea', 'tarea'];
+export const REF_TIPOS = ['idea', 'tarea', 'prospecto'];
 
 export class ErrorValidacion extends Error {
   constructor(codigo, detalle) { super(detalle || codigo); this.code = codigo; this.status = 400; }
@@ -91,7 +94,7 @@ export function validarTarea(b) {
 
 export function iteracionInicial() {
   return {
-    numero: 1, fase: 'elegir', inicio: '', demo: '', sincronia: '', canal: '',
+    numero: 1, fase: 'elegir', semanas: SEMANAS_DEFAULT, inicio: '', demo: '', sincronia: '', canal: '',
     dedicacion: { pablo: '', max: '', daniel: '' },
     artefactos: Object.fromEntries(ARTEFACTOS.map((a) => [a, { hecho: false, liga: '' }])),
     decisiones: [],
@@ -108,6 +111,7 @@ export function validarIteracion(b) {
   return {
     numero: entero(src.numero, 1, 999),
     fase: enumo(src.fase, FASES_ITERACION, 'elegir'),
+    semanas: src.semanas == null || src.semanas === '' ? SEMANAS_DEFAULT : entero(src.semanas, 4, 8),
     inicio: fechaDia(src.inicio),
     demo: fechaDia(src.demo),
     sincronia: texto(src.sincronia, 120),
@@ -130,4 +134,27 @@ export function validarMensaje(b) {
     ref = { tipo: r.tipo, id: idValido(r.id), titulo: texto(r.titulo, 160) };
   }
   return { texto: cuerpo, ref };
+}
+
+/** Prospecto del embudo comercial (Plan Maestro §9.2). */
+export function validarProspecto(b) {
+  const src = objeto(b);
+  const empresa = texto(src.empresa, 160).trim();
+  if (!empresa) falla('empresa_requerida', 'El prospecto necesita el nombre de la empresa');
+  return {
+    id: idValido(src.id),
+    empresa,
+    contacto: texto(src.contacto, 160),
+    area: texto(src.area, 120),
+    casoId: typeof src.casoId === 'string' && /^[A-Za-z0-9_-]{0,64}$/.test(src.casoId) ? src.casoId : '',
+    razon: texto(src.razon, 600),
+    dolor: texto(src.dolor, 600),
+    baseline: texto(src.baseline, 600),
+    siguientePaso: texto(src.siguientePaso, 300),
+    fechaSiguiente: fechaDia(src.fechaSiguiente),
+    responsable: enumo(src.responsable, RESPONSABLES, 'todos'),
+    notas: texto(src.notas, 2000),
+    etapa: enumo(src.etapa, ETAPAS_PROSPECTO, 'seleccion'),
+    creado: fechaISO(src.creado),
+  };
 }

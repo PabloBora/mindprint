@@ -178,3 +178,31 @@ test('mensajes: chat y comentarios con referencia; solo el autor borra', async (
     assert.equal((await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json()).mensajes.length, 1);
   } finally { await cerrar(); }
 });
+
+test('prospectos: crear, mover por el embudo, comentar con referencia y borrar', async () => {
+  const { base, cerrar } = await arrancar();
+  try {
+    const cp = await entrar(base, TOK_PABLO);
+    let r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { empresa: '' }));
+    assert.equal(r.status, 400); assert.equal((await r.json()).error, 'empresa_requerida');
+    r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { empresa: 'Maquinados del Bajío', contacto: 'Ing. Ruiz', area: 'Ventas', razon: 'Cotizan a mano', etapa: 'seleccion', responsable: 'daniel', siguientePaso: 'Llamar', fechaSiguiente: '2026-09-20' }));
+    assert.equal(r.status, 200); let j = await r.json(); assert.equal(j.doc.actualizadoPor, 'pablo'); assert.equal(j.doc.etapa, 'seleccion');
+    r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { ...j.doc, etapa: 'descubrimiento' }));
+    assert.equal(r.status, 200);
+    r = await fetch(`${base}/api/mensajes`, json('POST', cp, { texto: 'Ya nos dio acceso al inventario', ref: { tipo: 'prospecto', id: 'p1' } }));
+    assert.equal(r.status, 201); j = await r.json(); assert.deepEqual(j.doc.ref, { tipo: 'prospecto', id: 'p1', titulo: 'Maquinados del Bajío' });
+    const est = await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json();
+    assert.equal(est.prospectos.length, 1); assert.equal(est.prospectos[0].etapa, 'descubrimiento');
+    assert.ok(est.actividad.some((a) => a.objeto === 'prospecto' && a.accion === 'mueve' && a.detalle === 'descubrimiento' && a.titulo === 'Maquinados del Bajío'));
+    assert.ok(est.actividad.some((a) => a.objeto === 'prospecto' && a.accion === 'crea'));
+    assert.equal(est.iteracion.semanas, 6);
+    assert.deepEqual(Object.keys(est.iteracion.artefactos), ['caso', 'prospecto', 'mapa', 'caso_negocio', 'demo', 'doc_interna', 'propuesta', 'costos', 'decision']);
+    r = await fetch(`${base}/api/iteracion`, json('PUT', cp, { ...est.iteracion, semanas: 4 }));
+    assert.equal((await r.json()).doc.semanas, 4);
+    r = await fetch(`${base}/api/prospectos/p1`, { method: 'DELETE', headers: { cookie: cp } });
+    assert.equal(r.status, 200);
+    assert.equal((await fetch(`${base}/api/prospectos/p1`, { method: 'DELETE', headers: { cookie: cp } })).status, 404);
+    r = await fetch(`${base}/api/mensajes`, json('POST', cp, { texto: 'x', ref: { tipo: 'prospecto', id: 'p1' } }));
+    assert.equal(r.status, 400);
+  } finally { await cerrar(); }
+});

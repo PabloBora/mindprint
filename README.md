@@ -26,9 +26,11 @@ servidor solo permite `script-src 'self'`, así que no hay scripts inline. La in
 se conecta a `/api/eventos` (SSE) y, si eso falla, sondea cada 10 s. Sin sesión muestra la pantalla de
 entrada (pegar la liga personal).
 
-Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, el equipo, pendientes de
-la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre y diálogo de edición) ·
-**Ideas** (tablero por etapa con votos y criterios) · **Chat** (mensajes del equipo con no leídos, menciones
+Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, prospectos en juego, el
+equipo, pendientes de la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre y diálogo) ·
+**Prospectos** (el embudo comercial del Plan Maestro: selección → descubrimiento → caso de negocio →
+propuesta → piloto → conversión o descartado; diálogo con contacto, razón, dolor, baseline y siguiente paso) ·
+**Casos de uso** (tablero por etapa con votos y criterios; colección `ideas`) · **Chat** (mensajes del equipo con no leídos, menciones
 `@nombre`, ligas auto-enlazadas y referencias clicables) · **Iteración** (fases, datos, artefactos, decisiones) ·
 **Actividad** (todo lo que pasó, por día). Los diálogos de tarea e idea llevan al pie su hilo de comentarios,
 que son mensajes con referencia y también salen en el Chat.
@@ -65,11 +67,13 @@ y en los logs de peticiones de Cloud Run. Es el precio de no pedir contraseña a
 
 Todo bajo `/api/*` exige la cookie; sin ella responde `401 {"error":"sin_sesion"}`.
 
-- `GET /api/estado` → `{version, yo, personas, ideas[], tareas[], mensajes[], iteracion, actividad[], enLinea[]}`
+- `GET /api/estado` → `{version, yo, personas, ideas[], tareas[], prospectos[], mensajes[], iteracion, actividad[], enLinea[]}`
 - `PUT /api/ideas/:id` · `DELETE /api/ideas/:id` — el servidor valida, sella `actualizado`/`actualizadoPor`
   y aplica el tope de 3 votos por persona (`409 {"error":"sin_votos"}`).
-- `PUT /api/tareas/:id` · `DELETE /api/tareas/:id` · `PUT /api/iteracion`
-- `POST /api/mensajes` `{texto, ref?}` → `201 {ok, version, doc}` (chat sin `ref`; comentario con `ref: {tipo: idea|tarea, id}`,
+- `PUT /api/tareas/:id` · `DELETE /api/tareas/:id` · `PUT /api/prospectos/:id` · `DELETE /api/prospectos/:id` · `PUT /api/iteracion`
+  (la iteración lleva `semanas` 4–8 y los 9 artefactos del Plan Maestro: caso, prospecto, mapa, caso_negocio, demo,
+  doc_interna, propuesta, costos, decision)
+- `POST /api/mensajes` `{texto, ref?}` → `201 {ok, version, doc}` (chat sin `ref`; comentario con `ref: {tipo: idea|tarea|prospecto, id}`,
   el servidor rellena `titulo`; ref a algo inexistente → 400) · `DELETE /api/mensajes/:id` (solo el autor; ajeno → `403 {"error":"ajeno"}`).
   `GET /api/estado` trae `mensajes[]` (últimos 500, ascendente).
 - `GET /api/eventos` — SSE: `hola {version}` al conectar, `cambio {version}` tras cada escritura,
@@ -83,7 +87,7 @@ Compárala con `!==`; no asumas incrementos de uno.
 ## Datos
 
 Backends intercambiables en `src/datos/` con la misma interfaz. Colecciones Firestore: `ideas`,
-`tareas`, `mensajes` (un doc por mensaje; se cargan los últimos 500), documentos `iteracion/actual` y `actividad/reciente` (últimos 100 eventos).
+`tareas`, `prospectos`, `mensajes` (un doc por mensaje; se cargan los últimos 500), documentos `iteracion/actual` y `actividad/reciente` (últimos 100 eventos).
 El servidor mantiene una copia en memoria y **todas las escrituras van en serie**; por eso el servicio
 corre con **una sola instancia** (`--max-instances 1`).
 

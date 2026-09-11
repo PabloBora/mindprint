@@ -15,10 +15,11 @@
   const ESTADOS = [['pendiente', 'Pendiente'], ['en_curso', 'En curso'], ['bloqueada', 'Bloqueada'], ['hecha', 'Hecha']];
   const CRIT = [['acceso', 'Acceso al cliente'], ['dolor', 'Dolor claro'], ['agentizable', 'Agentizable']];
   const REACC = [['late', 'Me late'], ['dudo', 'Dudo'], ['cliente', 'Tengo cliente']];
-  const ARTEF = [['candidatos', 'Lista corta de candidatos', 'elegir'], ['mapa', 'Mapa del proceso (1 pág)', 'entender'], ['mvpdef', 'Definición del MVP (1 pág)', 'entender'], ['mvp', 'El MVP corriendo', 'construir'], ['demo', 'Guion de demo y notas de validación', 'validar'], ['decision', 'Decisión de cierre', 'decidir']];
+  const ARTEF = [['caso', 'Caso del demo elegido', 'elegir'], ['prospecto', 'Prospecto 1 seleccionado, con razón', 'elegir'], ['mapa', 'Mapa del proceso + baseline', 'entender'], ['caso_negocio', 'Caso de negocio: baseline + criterio de éxito', 'entender'], ['demo', 'Demo funcional del agente', 'construir'], ['doc_interna', 'Documentación técnica interna (1–2 pág)', 'construir'], ['propuesta', 'Propuesta presentada al prospecto', 'validar'], ['costos', 'Modelo de costos por ejecución', 'validar'], ['decision', 'Decisión de cierre: seguir / ajustar / descartar', 'decidir']];
+  const ETAPAS_P = [['seleccion', 'Selección'], ['descubrimiento', 'Descubrimiento'], ['caso_negocio', 'Caso de negocio'], ['propuesta', 'Propuesta'], ['piloto', 'Piloto'], ['conversion', 'Conversión'], ['descartado', 'Descartado']];
   const TIPOS_DEC = [['seguir', 'Seguir'], ['ajustar', 'Ajustar'], ['descartar', 'Descartar'], ['otra', 'Otra']];
   const VOTOS_MAX = 3;
-  const SEMANAS = 6;
+  const semanasDe = (it) => (it && it.semanas) || 6;
   const PROVOCACIONES = [
     '¿Qué proceso repetitivo viste esta semana que alguien hace a mano y nadie cuestiona?',
     '¿Quién paga hoy, en horas o en dinero, por mover información de un sistema a otro?',
@@ -36,7 +37,7 @@
   const S = {
     estado: null, yo: null, enLinea: [], sinSesion: false, conexion: 'conectando', errEntrada: '',
     tab: lsGet('mp.tab.v2', 'hoy'), stage: 'semilla', fAutor: 'todos', q: '', fResp: lsGet('mp.fresp', 'todas'), fFase: 'todas', colT: 'pendiente', verHechas: false, arrastrandoKind: 'idea',
-    openIdea: null, openTarea: null, leido: lsGet('mp.chat.leido', ''), prov: Math.floor(Math.random() * PROVOCACIONES.length), arrastrando: null, tipoDec: 'otra',
+    openIdea: null, openTarea: null, openProspecto: null, fRespP: 'todas', colP: 'seleccion', leido: lsGet('mp.chat.leido', ''), prov: Math.floor(Math.random() * PROVOCACIONES.length), arrastrando: null, tipoDec: 'otra',
   };
   let es = null;
   const timers = {};
@@ -165,10 +166,10 @@
     app.innerHTML = viewHeader() + viewTabs() + viewPanel() + viewFoot();
     restoreFocus(app, keep);
     const log1 = document.getElementById('chat-log'); if (log1) log1.scrollTop = abajo ? log1.scrollHeight : scrollPrev;
-    if (S.openIdea) renderDlg(); else if (S.openTarea) renderDlgTarea();
+    if (S.openIdea) renderDlg(); else if (S.openTarea) renderDlgTarea(); else if (S.openProspecto) renderDlgProspecto();
   }
   function renderHeader() { const h = document.getElementById('cabecera'); if (h && S.estado) h.outerHTML = viewHeader(); }
-  function viewPanel() { if (S.tab === 'tareas') return viewTareas(); if (S.tab === 'ideas') return viewIdeas(); if (S.tab === 'chat') return viewChat(); if (S.tab === 'iter') return viewIter(); if (S.tab === 'actividad') return viewActividad(); return viewHoy(); }
+  function viewPanel() { if (S.tab === 'tareas') return viewTareas(); if (S.tab === 'prospectos') return viewProspectos(); if (S.tab === 'ideas') return viewIdeas(); if (S.tab === 'chat') return viewChat(); if (S.tab === 'iter') return viewIter(); if (S.tab === 'actividad') return viewActividad(); return viewHoy(); }
   function viewFoot() {
     return '<div class="foot-links"><a href="https://docs.google.com/document/d/1VihQ50vREEp9m3yqD7ek7wDx0Z1pOueF3BC_ICT9JhA/edit" target="_blank" rel="noopener">Doc del método v0.1</a><a href="https://drive.google.com/drive/folders/1RiT2jf0FVqJdx-KTnQBxuYEWU7-CnKW-" target="_blank" rel="noopener">Carpeta Mindprint en Drive</a></div>';
   }
@@ -203,7 +204,7 @@
     const hot = mias.some(vencida);
     const it = S.estado.iteracion;
     const abiertas = S.estado.tareas.filter((t) => t.estado !== 'hecha').length;
-    const tabs = [['hoy', 'Hoy', String(mias.length), hot ? 'hot' : ''], ['tareas', 'Tareas', String(abiertas), ''], ['ideas', 'Ideas', String(S.estado.ideas.length), ''], ['chat', 'Chat', noLeidos() ? String(noLeidos()) : '', noLeidos() ? 'hot' : ''], ['iter', 'Iteración', `#${it.numero} · ${FASES[it.fase] || it.fase}`, ''], ['actividad', 'Actividad', '', '']];
+    const tabs = [['hoy', 'Hoy', String(mias.length), hot ? 'hot' : ''], ['tareas', 'Tareas', String(abiertas), ''], ['prospectos', 'Prospectos', String(S.estado.prospectos.filter(enJuego).length), ''], ['ideas', 'Casos de uso', String(S.estado.ideas.length), ''], ['chat', 'Chat', noLeidos() ? String(noLeidos()) : '', noLeidos() ? 'hot' : ''], ['iter', 'Iteración', `#${it.numero} · ${FASES[it.fase] || it.fase}`, ''], ['actividad', 'Actividad', '', '']];
     return `<nav class="tabs" role="tablist">${tabs.map((t) => `<button class="tab" role="tab" data-act="tab" data-tab="${t[0]}" aria-selected="${S.tab === t[0]}">${t[1]}${t[2] ? `<span class="n ${t[3]}">${esc(t[2])}</span>` : ''}</button>`).join('')}</nav>`;
   }
 
@@ -215,11 +216,11 @@
     const cand = ideas.filter((i) => i.etapa === 'candidata').length; const eleg = ideas.filter((i) => i.etapa === 'elegida').length;
     const quedan = Math.max(0, VOTOS_MAX - votosUsados(yo()));
     let h = '<div class="panel">';
-    h += '<form class="addform" data-act="add-idea"><input class="in" id="idea-new" data-keep="idea-new" placeholder="Una idea en una frase. El resto se llena después. (tecla n)" maxlength="140" autocomplete="off" required><button class="btn primary" type="submit">Agregar idea</button></form>';
-    h += `<div class="sub"><span><b>${ideas.length}</b> ideas</span><span><b>${cand}</b> candidatas</span><span><b>${eleg}</b> elegidas</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span>Se ordenan por votos y luego por criterios.</span></div>`;
+    h += '<form class="addform" data-act="add-idea"><input class="in" id="idea-new" data-keep="idea-new" placeholder="Un caso de uso en una frase: qué proceso automatizaríamos. El resto se llena después. (tecla n)" maxlength="140" autocomplete="off" required><button class="btn primary" type="submit">Agregar caso</button></form>';
+    h += `<div class="sub"><span><b>${ideas.length}</b> casos</span><span><b>${cand}</b> candidatas</span><span><b>${eleg}</b> elegidas</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span>Se ordenan por votos y luego por criterios.</span></div>`;
     h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${S.fAutor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${S.fAutor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><input class="in search" id="q" data-keep="q" placeholder="Buscar en las ideas" value="${esc(S.q)}" aria-label="Buscar"></div>`;
     h += `<div class="stagebar chips">${STAGES.map((s) => `<button class="chip" data-act="stage" data-s="${s[0]}" aria-pressed="${S.stage === s[0]}">${s[1]} <span class="tag">${visibles.filter((i) => i.etapa === s[0]).length}</span></button>`).join('')}</div>`;
-    if (!ideas.length) h += '<div class="empty"><b>Todavía no hay ideas.</b> Escribe la primera arriba: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente. Cada quien tiene 3 votos para empujar las que más le laten.</div>';
+    if (!ideas.length) h += '<div class="empty"><b>Todavía no hay casos de uso.</b> Escribe el primero arriba: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente. Cada quien tiene 3 votos para empujar los que más le laten.</div>';
     h += '<div class="board">';
     for (const [k, label] of STAGES) {
       const items = visibles.filter((i) => i.etapa === k).sort(sortIdeas);
@@ -285,13 +286,13 @@
   const ordenTareas = (a, b) => String(a.vence || '9').localeCompare(String(b.vence || '9')) || String(a.creado || '').localeCompare(String(b.creado || ''));
   const pillEstado = (t) => (t.estado === 'en_curso' ? '<span class="pill soft">en curso</span>' : t.estado === 'bloqueada' ? `<span class="pill bad">bloqueada${t.motivo ? `: ${esc(t.motivo)}` : ''}</span>` : '');
   function textoActividad(a) {
-    const OBJ = { idea: 'la idea', tarea: 'la tarea', iteracion: 'la iteración' };
+    const OBJ = { idea: 'el caso', tarea: 'la tarea', prospecto: 'el prospecto', iteracion: 'la iteración' };
     const obj = OBJ[a.objeto] || a.objeto; const t = `«${esc(a.titulo || '')}»`;
     if (a.accion === 'crea') return `creó ${obj} <b>${t}</b>`;
     if (a.accion === 'borra') return `borró ${obj} <b>${t}</b>`;
     if (a.accion === 'decide') return `registró una decisión <span class="pill soft">${esc(a.detalle || 'otra')}</span> <b>${t}</b>`;
     if (a.accion === 'mueve') {
-      const dest = a.objeto === 'idea' ? (STAGES.find((s) => s[0] === a.detalle) || [])[1] : a.objeto === 'tarea' ? (ESTADOS.find((s) => s[0] === a.detalle) || [])[1] : FASES[a.detalle];
+      const dest = a.objeto === 'idea' ? (STAGES.find((s) => s[0] === a.detalle) || [])[1] : a.objeto === 'tarea' ? (ESTADOS.find((s) => s[0] === a.detalle) || [])[1] : a.objeto === 'prospecto' ? etiquetaEtapaP(a.detalle) : FASES[a.detalle];
       return a.objeto === 'iteracion' ? `pasó la iteración a <b>${esc(dest || a.detalle)}</b>` : `movió ${obj} <b>${t}</b> a <b>${esc(dest || a.detalle || '')}</b>`;
     }
     return `editó ${obj} <b>${t}</b>`;
@@ -307,12 +308,12 @@
   function viewHoy() {
     const it = S.estado.iteracion; const me = yo();
     const idx = PHASES.findIndex((p) => p[0] === it.fase); const sem = semanaDe(it.inicio); const dDemo = diasHasta(it.demo);
-    const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEMANAS) * 100));
+    const SEM = semanasDe(it); const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEM) * 100));
     const mias = S.estado.tareas.filter((t) => esMia(t) && t.estado !== 'hecha').sort(ordenTareas);
     const hechasHoy = S.estado.tareas.filter((t) => esMia(t) && t.estado === 'hecha' && diaDe(t.actualizado) === hoy()).length;
     let h = '<div class="panel">';
     h += `<section class="hero"><div class="top-line"><h2>Iteración ${esc(it.numero || 1)} · <span class="fase">${esc(FASES[it.fase] || it.fase)}</span></h2><div class="facts">`
-      + `<span>${sem != null ? `semana <b>${sem}</b> de ${SEMANAS}` : '<b>sin fecha de inicio</b>'}</span>`
+      + `<span>${sem != null ? `semana <b>${sem}</b> de ${SEM}` : '<b>sin fecha de inicio</b>'}</span>`
       + `<span>${dDemo == null ? 'demo <b>sin fecha</b>' : dDemo < 0 ? `demo hace <b>${-dDemo} d</b>` : dDemo === 0 ? 'demo <b>hoy</b>' : `demo en <b>${dDemo} d</b> (${fmtDia(it.demo)})`}</span>`
       + `<span>sincronía <b>${esc(it.sincronia || 'por definir')}</b></span><span>canal <b>${esc(it.canal || 'por definir')}</b></span></div></div>`
       + `<div class="bar"><i style="width:${pct}%"></i></div>`
@@ -322,6 +323,7 @@
       + '<form class="quick" data-act="add-mia"><input class="in" id="mia-new" data-keep="mia-new" placeholder="Algo que tienes que hacer" maxlength="160" autocomplete="off" required><input class="in" type="date" id="mia-vence" aria-label="Vence"><button class="btn primary" type="submit">Agregar</button></form>'
       + `<div class="lista">${mias.length ? mias.map(itemTarea).join('') : '<div class="hint">Nada pendiente a tu nombre ni de los tres. Agrega arriba o toma algo del tablero de Tareas.</div>'}</div>`
       + '<button class="btn quiet sm more" type="button" data-act="ir" data-tab="tareas">Ver el tablero de tareas</button></section>';
+    h += bloqueProspectosHoy();
     const otros = Object.keys(P()).filter((p) => p !== me);
     const otrosEnLinea = otros.filter((p) => S.enLinea.includes(p)).length;
     h += `<section class="box"><h2>El equipo <span class="n">${otrosEnLinea === 0 ? 'nadie más en línea' : `${otrosEnLinea} en línea`}</span></h2><div>${otros.map((p) => {
@@ -406,6 +408,86 @@
     if (!dlg.open) dlg.showModal();
   }
 
+  /* ---- prospectos: el embudo comercial del Plan Maestro ---- */
+  const prospectoById = (id) => S.estado.prospectos.find((p) => p.id === id);
+  const enJuego = (p) => !['conversion', 'descartado'].includes(p.etapa);
+  const ordenProspectos = (a, b) => String(a.fechaSiguiente || '9').localeCompare(String(b.fechaSiguiente || '9')) || String(a.creado || '').localeCompare(String(b.creado || ''));
+  const etiquetaEtapaP = (k) => (ETAPAS_P.find((e) => e[0] === k) || [])[1] || k;
+  function pillSiguiente(p) {
+    if (!p.fechaSiguiente || !enJuego(p)) return p.fechaSiguiente ? `<span class="tag">${fmtDia(p.fechaSiguiente)}</span>` : '';
+    const d = diasHasta(p.fechaSiguiente);
+    if (d < 0) return `<span class="pill bad">venció ${fmtDia(p.fechaSiguiente)}</span>`;
+    if (d === 0) return '<span class="pill warn">hoy</span>';
+    if (d === 1) return '<span class="pill warn">mañana</span>';
+    return `<span class="tag">${fmtDia(p.fechaSiguiente)}</span>`;
+  }
+  async function guardarProspecto(p) {
+    try { const j = await api('PUT', `/api/prospectos/${encodeURIComponent(p.id)}`, sinSellos(p)); upsert(S.estado.prospectos, j.doc); S.estado.version = j.version; render(); return true; }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(e.code === 'empresa_requerida' ? 'Falta el nombre de la empresa.' : mensajeError(e)); await cargarEstado(); } return false; }
+  }
+  async function borrarProspecto(id) {
+    try { const j = await api('DELETE', `/api/prospectos/${encodeURIComponent(id)}`); S.estado.prospectos = S.estado.prospectos.filter((p) => p.id !== id); S.estado.version = j.version; render(); }
+    catch (e) { if (e.code !== 'sin_sesion') { toast(mensajeError(e)); await cargarEstado(); } }
+  }
+  function viewProspectos() {
+    let h = '<div class="panel">';
+    h += '<form class="addform tareas" data-act="add-prospecto">'
+      + '<input class="in t" id="prospecto-new" data-keep="prospecto-new" placeholder="Empresa o prospecto nuevo" maxlength="160" autocomplete="off" required>'
+      + `<select class="in" id="prospecto-resp" aria-label="Responsable">${Object.entries(RESP).map(([k, n]) => `<option value="${k}"${k === 'daniel' ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+      + `<select class="in" id="prospecto-caso" aria-label="Caso de uso"><option value="">Caso por definir</option>${S.estado.ideas.slice().sort((a, b) => String(a.titulo).localeCompare(String(b.titulo))).map((i) => `<option value="${esc(i.id)}">${esc(i.titulo)}</option>`).join('')}</select>`
+      + '<input class="in" type="date" id="prospecto-fecha" aria-label="Siguiente paso, fecha">'
+      + '<button class="btn primary" type="submit">Agregar</button></form>';
+    h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="frespp" data-v="todas" aria-pressed="${S.fRespP === 'todas'}">Todos</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="frespp" data-v="${p}" aria-pressed="${S.fRespP === p}">${avatar(p)}${esc(nombre(p))}</button>`).join('')}</div><span class="hint">Un prospecto nuevo al mes, propuesta al cierre del mes, seguimiento a quien muestre interés. Si no hay urgencia, datos, valor medible ni disposición a pagar: se descarta pronto.</span></div>`;
+    let list = S.estado.prospectos.slice();
+    if (S.fRespP !== 'todas') list = list.filter((p) => p.responsable === S.fRespP || p.responsable === 'todos');
+    if (!S.estado.prospectos.length) h += '<div class="empty"><b>Todavía no hay prospectos.</b> Agrega el primero arriba con la empresa; después abre la tarjeta para anotar contacto, área, por qué lo elegimos, el dolor y el siguiente paso con fecha.</div>';
+    h += `<div class="stagebar chips">${ETAPAS_P.map((e) => `<button class="chip" data-act="colp" data-v="${e[0]}" aria-pressed="${S.colP === e[0]}">${e[1]} <span class="tag">${list.filter((p) => p.etapa === e[0]).length}</span></button>`).join('')}</div>`;
+    h += '<div class="scroll-x"><div class="board p7">';
+    for (const [k, label] of ETAPAS_P) {
+      const items = list.filter((p) => p.etapa === k).sort(ordenProspectos);
+      h += `<section class="col${S.colP === k ? ' active' : ''}${items.length ? '' : ' empty'}" data-col="${k}" data-kind="prospecto"><h3><span class="${k === 'conversion' ? 'hl' : ''}">${label}</span><span class="n">${items.length}</span></h3><div class="cards">${items.map(cardProspecto).join('')}</div></section>`;
+    }
+    h += '</div></div></div>';
+    return h;
+  }
+  function cardProspecto(p) {
+    const caso = p.casoId ? ideaById(p.casoId) : null; const nc = comentariosDe('prospecto', p.id).length;
+    return `<div class="card prospecto" role="button" tabindex="0" draggable="true" data-kind="prospecto" data-act="open-prospecto" data-id="${esc(p.id)}">`
+      + `<div class="t">${esc(p.empresa)}</div>`
+      + ((p.contacto || p.area) ? `<div class="d">${esc([p.contacto, p.area].filter(Boolean).join(' · '))}</div>` : '')
+      + (p.siguientePaso ? `<div class="d"><span class="k">siguiente</span> ${esc(p.siguientePaso)}</div>` : '')
+      + `<div class="meta">${avatar(p.responsable, 'sm')}${pillSiguiente(p)}${caso ? `<span class="tag" title="${esc(caso.titulo)}">caso: ${esc(caso.titulo.slice(0, 28))}${caso.titulo.length > 28 ? '…' : ''}</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}</div></div>`;
+  }
+  function renderDlgProspecto() {
+    const dlg = document.getElementById('dlg'); const p = prospectoById(S.openProspecto);
+    if (!p) { S.openProspecto = null; if (dlg.open) dlg.close(); return; }
+    const keep = captureFocus(dlg); const B = (f) => `data-bind="prospectos:${esc(p.id)}:${f}"`;
+    const ideas = S.estado.ideas.slice().sort((a, b) => String(a.titulo).localeCompare(String(b.titulo)));
+    let h = '<div class="dlg"><div class="main">';
+    h += `<div class="seg wrap"><span class="k">Etapa</span>${ETAPAS_P.map((e) => `<button type="button" data-act="etapa-p" data-id="${esc(p.id)}" data-s="${e[0]}" aria-pressed="${p.etapa === e[0]}">${e[1]}</button>`).join('')}</div>`;
+    h += `<input class="title" ${B('empresa')} value="${esc(p.empresa)}" maxlength="160" aria-label="Empresa">`;
+    h += `<div class="datos"><div class="field"><label>Contacto</label><input class="in" ${B('contacto')} value="${esc(p.contacto)}" placeholder="Nombre y puesto"></div><div class="field"><label>Área o proceso</label><input class="in" ${B('area')} value="${esc(p.area)}" placeholder="Ventas, compras, calidad…"></div></div>`;
+    h += `<div class="field"><label>Por qué lo elegimos</label><textarea class="in" rows="2" ${B('razon')} placeholder="Acceso al cliente, dolor claro, agentizable con lo que sabemos hacer">${esc(p.razon)}</textarea></div>`;
+    h += `<div class="field"><label>Dolor que vimos</label><textarea class="in" rows="2" ${B('dolor')} placeholder="Tiempo manual, retrabajo, demora, errores">${esc(p.dolor)}</textarea></div>`;
+    h += `<div class="field"><label>Baseline y criterio de éxito</label><textarea class="in" rows="2" ${B('baseline')} placeholder="Volumen, minutos por caso, errores hoy; qué tendría que pasar para seguir">${esc(p.baseline)}</textarea></div>`;
+    h += `<div class="field"><label>Notas</label><textarea class="in" rows="2" ${B('notas')} placeholder="Objeciones, preguntas, lo que dijeron">${esc(p.notas)}</textarea></div>`;
+    h += seccionComentarios('prospecto', p.id);
+    h += '</div><div class="side">';
+    h += `<div class="field"><label>Siguiente paso</label><input class="in" ${B('siguientePaso')} value="${esc(p.siguientePaso)}" placeholder="Llamar, mandar propuesta, agendar demo"></div>`;
+    h += `<div class="field"><label>Para cuándo</label><input class="in" type="date" ${B('fechaSiguiente')} value="${esc(p.fechaSiguiente)}"></div>`;
+    h += `<div class="field"><label>Responsable</label><select class="in" ${B('responsable')}>${Object.entries(RESP).map(([k, n]) => `<option value="${k}"${p.responsable === k ? ' selected' : ''}>${n}</option>`).join('')}</select></div>`;
+    h += `<div class="field"><label>Caso de uso</label><select class="in" ${B('casoId')}><option value="">por definir</option>${ideas.map((i) => `<option value="${esc(i.id)}"${p.casoId === i.id ? ' selected' : ''}>${esc(i.titulo)}</option>`).join('')}</select></div>`;
+    h += '</div>';
+    h += `<div class="foot"><span>creado ${fmtFechaHora(p.creado)}${p.actualizadoPor ? ` · editado por ${esc(nombre(p.actualizadoPor))} ${relTiempo(p.actualizado)}` : ''}</span><span><button class="btn quiet danger sm" type="button" data-act="del-prospecto" data-id="${esc(p.id)}">Eliminar</button> <button class="btn sm" type="button" data-act="close">Cerrar</button></span></div>`;
+    h += '</div>';
+    dlg.innerHTML = h; restoreFocus(dlg, keep);
+    if (!dlg.open) dlg.showModal();
+  }
+  function bloqueProspectosHoy() {
+    const lista = S.estado.prospectos.filter(enJuego).sort(ordenProspectos);
+    return `<section class="box"><h2>Prospectos en juego <span class="n">${lista.length}</span></h2><div class="lista">${lista.length ? lista.slice(0, 6).map((p) => `<div class="item-t"><span class="av sm ${esc(p.responsable)}" title="${esc(nombre(p.responsable))}">${p.responsable === 'todos' ? '3' : esc(nombre(p.responsable)[0] || '?')}</span><div><button class="tit" type="button" data-act="open-prospecto" data-id="${esc(p.id)}">${esc(p.empresa)}</button><div class="tags"><span class="pill soft">${esc(etiquetaEtapaP(p.etapa))}</span>${p.siguientePaso ? `<span>${esc(p.siguientePaso)}</span>` : ''}${pillSiguiente(p)}</div></div></div>`).join('') : '<div class="hint">Sin prospectos. El Plan pide uno nuevo al mes: agrega el primero en la pestaña Prospectos.</div>'}</div><button class="btn quiet sm more" type="button" data-act="ir" data-tab="prospectos">Ver el embudo</button></section>`;
+  }
+
   /* ---- chat y comentarios (un solo modelo: mensaje con o sin referencia) ---- */
   const mensajes = () => (S.estado && S.estado.mensajes) || [];
   const comentariosDe = (tipo, id) => mensajes().filter((m) => m.ref && m.ref.tipo === tipo && m.ref.id === id);
@@ -418,8 +500,8 @@
   }
   function itemMsg(m, enHilo) {
     const mio = m.quien === yo();
-    const ref = !enHilo && m.ref ? (m.ref.tipo === 'idea' ? ideaById(m.ref.id) : tareaById(m.ref.id)) : null;
-    const chipRef = !enHilo && m.ref ? (ref ? `<button class="chip sm" type="button" data-act="${m.ref.tipo === 'idea' ? 'open' : 'open-tarea'}" data-id="${esc(m.ref.id)}">${m.ref.tipo === 'idea' ? 'idea' : 'tarea'}: ${esc(m.ref.titulo)}</button>` : `<span class="tag">${m.ref.tipo}: ${esc(m.ref.titulo)} (ya no existe)</span>`) : '';
+    const ref = !enHilo && m.ref ? (m.ref.tipo === 'idea' ? ideaById(m.ref.id) : m.ref.tipo === 'tarea' ? tareaById(m.ref.id) : prospectoById(m.ref.id)) : null;
+    const chipRef = !enHilo && m.ref ? (ref ? `<button class="chip sm" type="button" data-act="${m.ref.tipo === 'idea' ? 'open' : m.ref.tipo === 'tarea' ? 'open-tarea' : 'open-prospecto'}" data-id="${esc(m.ref.id)}">${m.ref.tipo === 'idea' ? 'caso' : m.ref.tipo}: ${esc(m.ref.titulo)}</button>` : `<span class="tag">${m.ref.tipo}: ${esc(m.ref.titulo)} (ya no existe)</span>`) : '';
     return `<div class="msg${mio ? ' mio' : ''}">${avatar(m.quien, 'sm')}<div class="cuerpo"><div class="hd"><b>${esc(nombre(m.quien) || '¿?')}</b><span class="when" title="${esc(fmtFechaHora(m.fecha))}">${esc(relTiempo(m.fecha))}</span>${chipRef}${mio ? `<button class="lnk" type="button" data-act="del-msg" data-id="${esc(m.id)}" aria-label="Borrar mensaje">borrar</button>` : ''}</div><div class="txt">${formatoMensaje(m.texto)}</div></div></div>`;
   }
   function viewChat() {
@@ -460,11 +542,11 @@
   function viewIter() {
     const it = S.estado.iteracion; const B = (f) => `data-bind="iter:actual:${f}"`;
     const idx = PHASES.findIndex((p) => p[0] === it.fase); const sem = semanaDe(it.inicio);
-    const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEMANAS) * 100));
+    const SEM = semanasDe(it); const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEM) * 100));
     const dDemo = diasHasta(it.demo);
     let h = '<div class="panel"><div class="grid2">';
-    h += `<div class="box"><h2>Iteración ${esc(it.numero || 1)}<small>${FASES[it.fase] || it.fase}${sem != null ? ` · semana ${sem} de ${SEMANAS}` : ' · sin fecha de inicio'}${dDemo != null ? (dDemo < 0 ? ` · la demo fue hace ${-dDemo} d` : dDemo === 0 ? ' · la demo es hoy' : ` · ${dDemo} d para la demo`) : ''}</small></h2>`;
-    h += `<div><div class="bar"><i style="width:${pct}%"></i></div><div class="barlbl"><span>${it.inicio ? `inicio ${fmtDia(it.inicio)}` : 'pon la fecha de inicio'}</span><span>${it.demo ? `demo ${fmtDia(it.demo)}` : `${SEMANAS} semanas`}</span></div></div>`;
+    h += `<div class="box"><h2>Iteración ${esc(it.numero || 1)}<small>${FASES[it.fase] || it.fase}${sem != null ? ` · semana ${sem} de ${SEM}` : ' · sin fecha de inicio'}${dDemo != null ? (dDemo < 0 ? ` · la demo fue hace ${-dDemo} d` : dDemo === 0 ? ' · la demo es hoy' : ` · ${dDemo} d para la demo`) : ''}</small></h2>`;
+    h += `<div><div class="bar"><i style="width:${pct}%"></i></div><div class="barlbl"><span>${it.inicio ? `inicio ${fmtDia(it.inicio)}` : 'pon la fecha de inicio'}</span><span>${it.demo ? `demo ${fmtDia(it.demo)}` : `${SEM} semanas`}</span></div></div>`;
     h += `<div class="stepper">${PHASES.map((p, i) => `<button type="button" class="step${i < idx ? ' done' : ''}${i === idx ? ' now' : ''}" data-act="fase" data-f="${p[0]}"><span>${p[1]}</span><small>${p[2]}</small></button>`).join('')}</div>`;
     h += '<div class="datos">'
       + `<div class="field"><label>Inicio</label><input class="in" type="date" ${B('inicio')} value="${esc(it.inicio)}"></div>`
@@ -473,6 +555,7 @@
       + `<div class="field"><label>Canal del día a día</label><input class="in" ${B('canal')} value="${esc(it.canal)}" placeholder="WhatsApp, Slack…"></div>`
       + Object.keys(P()).map((k) => `<div class="field"><label>Dedicación · ${esc(P()[k].nombre)}</label><input class="in" ${B(`dedicacion.${k}`)} value="${esc((it.dedicacion || {})[k])}" placeholder="h por semana"></div>`).join('')
       + `<div class="field"><label>Número de iteración</label><input class="in" type="number" min="1" ${B('numero')} value="${esc(it.numero || 1)}"></div>`
+      + `<div class="field"><label>Semanas de la iteración (4–8)</label><input class="in" type="number" min="4" max="8" ${B('semanas')} value="${esc(SEM)}"></div>`
       + '</div></div>';
     h += '<div style="display:grid;gap:16px">';
     h += `<div class="box"><h2>Artefactos<small>uno por fase</small></h2><div>${ARTEF.map((a) => { const x = (it.artefactos || {})[a[0]] || {}; return `<div class="art${x.hecho ? ' ok' : ''}"><input type="checkbox" ${B(`artefactos.${a[0]}.hecho`)}${x.hecho ? ' checked' : ''} aria-label="${a[1]}"><span class="name">${a[1]}<span class="tag">${FASES[a[2]]}</span>${ligaSegura(x.liga) ? `<a href="${esc(x.liga)}" target="_blank" rel="noopener">abrir</a>` : ''}</span><input class="in" ${B(`artefactos.${a[0]}.liga`)} value="${esc(x.liga)}" placeholder="liga"></div>`; }).join('')}</div></div>`;
@@ -507,15 +590,20 @@
     if (act === 'fresp') { S.fResp = el.dataset.v; lsSet('mp.fresp', S.fResp); render(); return; }
     if (act === 'tipodec') { S.tipoDec = el.dataset.v; render(); return; }
     if (act === 'prov') { S.prov = (S.prov + 1) % PROVOCACIONES.length; render(); return; }
-    if (act === 'open') { S.openTarea = null; S.openIdea = el.dataset.id; renderDlg(); return; }
-    if (act === 'open-tarea') { S.openIdea = null; S.openTarea = el.dataset.id; renderDlgTarea(); return; }
+    if (act === 'open') { S.openTarea = null; S.openProspecto = null; S.openIdea = el.dataset.id; renderDlg(); return; }
+    if (act === 'open-tarea') { S.openIdea = null; S.openProspecto = null; S.openTarea = el.dataset.id; renderDlgTarea(); return; }
+    if (act === 'open-prospecto') { S.openIdea = null; S.openTarea = null; S.openProspecto = el.dataset.id; renderDlgProspecto(); return; }
+    if (act === 'frespp') { S.fRespP = el.dataset.v; render(); return; }
+    if (act === 'colp') { S.colP = el.dataset.v; render(); return; }
     if (act === 'ir') { S.tab = el.dataset.tab; lsSet('mp.tab.v2', S.tab); render(); return; }
     if (act === 'colt') { S.colT = el.dataset.v; render(); return; }
     if (act === 'ffase') { S.fFase = el.dataset.v; render(); return; }
     if (act === 'verhechas') { S.verHechas = !S.verHechas; render(); return; }
-    if (act === 'close') { const d = document.getElementById('dlg'); S.openIdea = null; S.openTarea = null; if (d.open) d.close(); return; }
+    if (act === 'close') { const d = document.getElementById('dlg'); S.openIdea = null; S.openTarea = null; S.openProspecto = null; if (d.open) d.close(); return; }
     if (!S.estado) return;
     if (act === 'etapa') { const i = ideaById(el.dataset.id); if (i && i.etapa !== el.dataset.s) await guardarIdea({ ...i, etapa: el.dataset.s }); return; }
+    if (act === 'etapa-p') { const p = prospectoById(el.dataset.id); if (p && p.etapa !== el.dataset.s) await guardarProspecto({ ...p, etapa: el.dataset.s }); return; }
+    if (act === 'del-prospecto') { const p = prospectoById(el.dataset.id); if (!p) return; if (!confirm(`¿Eliminar el prospecto "${p.empresa || ''}"?`)) return; S.openProspecto = null; const d = document.getElementById('dlg'); if (d.open) d.close(); await borrarProspecto(p.id); return; }
     if (act === 'estado-t') { const t = tareaById(el.dataset.id); if (t && t.estado !== el.dataset.s) await guardarTarea({ ...t, estado: el.dataset.s }); return; }
     if (act === 'voto') {
       const i = ideaById(el.dataset.id); if (!i) return; const d = parseInt(el.dataset.d, 10); const me = yo();
@@ -525,7 +613,7 @@
     }
     if (act === 'crit') { const i = ideaById(el.dataset.id); if (!i) return; await guardarIdea({ ...i, criterios: { ...(i.criterios || {}), [el.dataset.k]: parseInt(el.dataset.v, 10) } }); return; }
     if (act === 'reacc') { const i = ideaById(el.dataset.id); if (!i) return; const me = yo(); const r = { ...(i.reacciones || {}) }; r[me] = r[me] === el.dataset.r ? '' : el.dataset.r; await guardarIdea({ ...i, reacciones: r }); return; }
-    if (act === 'del-idea') { const i = ideaById(el.dataset.id); if (!i) return; if (!confirm(`¿Eliminar la idea "${i.titulo || ''}"? No se puede deshacer.`)) return; S.openIdea = null; document.getElementById('dlg').close(); await borrarIdea(i.id); return; }
+    if (act === 'del-idea') { const i = ideaById(el.dataset.id); if (!i) return; if (!confirm(`¿Eliminar el caso "${i.titulo || ''}"? No se puede deshacer.`)) return; S.openIdea = null; document.getElementById('dlg').close(); await borrarIdea(i.id); return; }
     if (act === 'del-msg') { if (!confirm('¿Borrar tu mensaje?')) return; await borrarMensaje(el.dataset.id); return; }
     if (act === 'del-tarea') { const t = tareaById(el.dataset.id); if (!t) return; if (!confirm(`¿Eliminar la tarea "${t.titulo || ''}"?`)) return; S.openTarea = null; const d = document.getElementById('dlg'); if (d.open) d.close(); await borrarTarea(t.id); return; }
     if (act === 'hecha') { const t = tareaById(el.dataset.id); if (!t) return; await guardarTarea({ ...t, estado: t.estado === 'hecha' ? 'pendiente' : 'hecha' }); return; }
@@ -551,7 +639,7 @@
     if (f.dataset.act === 'add-idea') {
       const inp = document.getElementById('idea-new'); const t = inp.value.trim(); if (!t) return;
       const ok = await guardarIdea({ id: uid(), titulo: t, dolor: '', quien: '', agente: '', validacion: '', notas: '', autor: yo(), etapa: 'semilla', votos: {}, criterios: {}, reacciones: {} });
-      if (ok) { S.stage = 'semilla'; const i2 = document.getElementById('idea-new'); if (i2) i2.value = ''; render(); toast('Idea agregada en Semilla'); }
+      if (ok) { S.stage = 'semilla'; const i2 = document.getElementById('idea-new'); if (i2) i2.value = ''; render(); toast('Caso agregado en Semilla'); }
       return;
     }
     if (f.dataset.act === 'add-tarea') {
@@ -567,6 +655,12 @@
       return;
     }
     if (f.dataset.act === 'add-msg') { await enviarMensaje(f); return; }
+    if (f.dataset.act === 'add-prospecto') {
+      const inp = document.getElementById('prospecto-new'); const e = inp.value.trim(); if (!e) return;
+      const ok = await guardarProspecto({ id: uid(), empresa: e, contacto: '', area: '', casoId: document.getElementById('prospecto-caso').value || '', razon: '', dolor: '', baseline: '', siguientePaso: '', fechaSiguiente: document.getElementById('prospecto-fecha').value || '', responsable: document.getElementById('prospecto-resp').value, notas: '', etapa: 'seleccion' });
+      if (ok) { const i2 = document.getElementById('prospecto-new'); if (i2) i2.value = ''; S.colP = 'seleccion'; render(); toast('Prospecto agregado en Selección'); }
+      return;
+    }
     if (f.dataset.act === 'add-dec') {
       const ta = document.getElementById('dec-new'); const txt = ta.value.trim(); if (!txt) return;
       const it = S.estado.iteracion;
@@ -580,10 +674,11 @@
     if (!S.estado) return;
     const [col, id, campo] = el.dataset.bind.split(':'); if (!col) return;
     let val = el.type === 'checkbox' ? el.checked : el.value;
-    if (el.type === 'number') val = parseInt(val, 10) || 1;
+    if (el.type === 'number') val = parseInt(val, 10) || (campo === 'semanas' ? 6 : 1);
     const run = async () => {
       if (col === 'ideas') { const i = ideaById(id); if (!i || i[campo] === val) return; await guardarIdea({ ...i, [campo]: val }); }
       else if (col === 'tareas') { const t = tareaById(id); if (!t || t[campo] === val) return; await guardarTarea({ ...t, [campo]: val }); }
+      else if (col === 'prospectos') { const p = prospectoById(id); if (!p || p[campo] === val) return; await guardarProspecto({ ...p, [campo]: val }); }
       else if (col === 'iter') { const it = JSON.parse(JSON.stringify(S.estado.iteracion)); setPath(it, campo, val); await guardarIteracion(it); }
     };
     clearTimeout(timers[el.dataset.bind]);
@@ -596,7 +691,7 @@
     applyBind(el, false);
   });
   document.addEventListener('change', (e) => { const el = e.target; if (el.id === 'ffase') { S.fFase = el.value; render(); return; } if (!el.dataset || !el.dataset.bind) return; applyBind(el, true); });
-  document.getElementById('dlg').addEventListener('close', () => { S.openIdea = null; S.openTarea = null; });
+  document.getElementById('dlg').addEventListener('close', () => { S.openIdea = null; S.openTarea = null; S.openProspecto = null; });
 
   /* arrastrar tarjetas entre etapas (escritorio) */
   document.addEventListener('dragstart', (e) => { const c = e.target.closest && e.target.closest('.card[draggable]'); if (!c) return; S.arrastrando = c.dataset.id; S.arrastrandoKind = c.dataset.kind || 'idea'; c.classList.add('drag'); try { e.dataTransfer.setData('text/plain', c.dataset.id); e.dataTransfer.effectAllowed = 'move'; } catch { /* no aplica */ } });
@@ -606,6 +701,7 @@
   document.addEventListener('drop', async (e) => {
     const col = e.target.closest && e.target.closest('.col[data-col]'); if (!col || !S.arrastrando) return; e.preventDefault();
     const id = S.arrastrando; const destino = col.dataset.col; S.arrastrando = null; col.classList.remove('over');
+    if (col.dataset.kind === 'prospecto') { const p = prospectoById(id); if (p && p.etapa !== destino) { const ok = await guardarProspecto({ ...p, etapa: destino }); if (ok) toast(`«${p.empresa}» → ${etiquetaEtapaP(destino)}`); } return; }
     if (col.dataset.kind === 'tarea') { const t = tareaById(id); if (t && t.estado !== destino) { const ok = await guardarTarea({ ...t, estado: destino }); if (ok) toast(`«${t.titulo}» → ${(ESTADOS.find((s) => s[0] === destino) || [])[1]}`); } return; }
     const i = ideaById(id); if (i && i.etapa !== destino) { const ok = await guardarIdea({ ...i, etapa: destino }); if (ok) toast(`«${i.titulo}» → ${(STAGES.find((s) => s[0] === destino) || [])[1]}`); }
   });
