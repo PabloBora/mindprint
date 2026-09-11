@@ -11,9 +11,15 @@ export const CRITERIOS = ['acceso', 'dolor', 'agentizable'];
 export const ARTEFACTOS = ['candidatos', 'mapa', 'mvpdef', 'mvp', 'demo', 'decision'];
 export const TIPOS_DECISION = ['seguir', 'ajustar', 'descartar', 'otra'];
 export const VOTOS_MAX = 3;
+export const MENSAJES_MAX = 500;
+export const REF_TIPOS = ['idea', 'tarea'];
 
 export class ErrorValidacion extends Error {
   constructor(codigo, detalle) { super(detalle || codigo); this.code = codigo; this.status = 400; }
+}
+/** Acción sobre algo ajeno (p. ej. borrar el mensaje de otra persona): 403. */
+export class ErrorProhibido extends Error {
+  constructor(codigo, detalle) { super(detalle || codigo); this.code = codigo; this.status = 403; }
 }
 /** Regla de negocio que choca con el estado actual (p. ej. votos agotados): 409. */
 export class ErrorConflicto extends Error {
@@ -110,4 +116,18 @@ export function validarIteracion(b) {
     artefactos: Object.fromEntries(ARTEFACTOS.map((a) => { const x = objeto(art[a]); return [a, { hecho: x.hecho === true, liga: texto(x.liga, 500) }]; })),
     decisiones,
   };
+}
+
+/** Mensaje de chat (sin ref) o comentario (ref a idea/tarea). El servidor sella id/fecha/quien. */
+export function validarMensaje(b) {
+  const src = objeto(b);
+  const cuerpo = texto(src.texto, 1000).trim();
+  if (!cuerpo) falla('texto_requerido', 'El mensaje está vacío');
+  let ref = null;
+  if (src.ref != null && src.ref !== '') {
+    const r = objeto(src.ref);
+    if (!REF_TIPOS.includes(r.tipo)) falla('ref_invalida', 'ref.tipo debe ser idea o tarea');
+    ref = { tipo: r.tipo, id: idValido(r.id), titulo: texto(r.titulo, 160) };
+  }
+  return { texto: cuerpo, ref };
 }

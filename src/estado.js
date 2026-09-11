@@ -1,16 +1,18 @@
 // Estado del tablero: caché en memoria + versión + avisos en vivo (SSE) + presencia + actividad.
 // Todas las escrituras pasan por aquí y se ejecutan EN SERIE (un solo contenedor: max-instances 1),
 // así el tope de votos y la caché nunca se cruzan entre peticiones concurrentes.
+import crypto from 'node:crypto';
 import { PERSONAS } from './auth.js';
-import { validarIdea, validarTarea, validarIteracion, iteracionInicial, VOTOS_MAX, ErrorConflicto } from './validar.js';
+import { validarIdea, validarTarea, validarIteracion, validarMensaje, iteracionInicial, VOTOS_MAX, MENSAJES_MAX, ErrorConflicto, ErrorValidacion, ErrorProhibido } from './validar.js';
 
 const ACTIVIDAD_MAX = 100;
 const ahora = () => new Date().toISOString();
+const nuevoId = () => crypto.randomUUID().replace(/-/g, '').slice(0, 20);
 
 export function crearEstado(datos) {
   // `version` es un marcador de "algo cambió". Arranca en Date.now() para que un reinicio o
   // redeploy nunca la haga bajar; los clientes comparan con !== (no confíes en +1 exacto).
-  const st = { version: Date.now(), ideas: new Map(), tareas: new Map(), iteracion: iteracionInicial(), actividad: [], cargado: false };
+  const st = { version: Date.now(), ideas: new Map(), tareas: new Map(), mensajes: [], iteracion: iteracionInicial(), actividad: [], cargado: false };
   const clientes = new Set(); // { res, persona }
   let cola = Promise.resolve();
   const enSerie = (fn) => { const p = cola.then(fn, fn); cola = p.catch(() => {}); return p; };
@@ -21,6 +23,7 @@ export function crearEstado(datos) {
     st.tareas = new Map(t.tareas.filter((d) => d && d.id).map((d) => [d.id, d]));
     st.iteracion = t.iteracion ? validarIteracion(t.iteracion) : iteracionInicial();
     st.actividad = Array.isArray(t.actividad) ? t.actividad.slice(0, ACTIVIDAD_MAX) : [];
+    st.mensajes = (Array.isArray(t.mensajes) ? t.mensajes : []).filter((d) => d && d.id && d.fecha).sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))).slice(-MENSAJES_MAX);
     st.cargado = true;
   }
 
@@ -33,6 +36,7 @@ export function crearEstado(datos) {
       personas: PERSONAS,
       ideas: [...st.ideas.values()],
       tareas: [...st.tareas.values()],
+      mensajes: st.mensajes,
       iteracion: st.iteracion,
       actividad: st.actividad,
       enLinea: enLinea(),
@@ -116,6 +120,30 @@ export function crearEstado(datos) {
     return doc;
   });
 
+  const guardarMensaje = (cuerpo, persona) => enSerie(async () => {
+    const limpio = validarMensaje(cuerpo);
+    if (limpio.ref) {
+      const item = limpio.ref.tipo === 'idea' ? st.ideas.get(limpio.ref.id) : st.tareas.get(limpio.ref.id);
+      if (!item) throw new ErrorValidacion('ref_invalida', 'La referencia apunta a algo que ya no existe');
+      limpio.ref.titulo = String(item.titulo || '').slice(0, 160);
+    }
+    const doc = { id: nuevoId(), fecha: ahora(), quien: persona, texto: limpio.texto, ref: limpio.ref };
+    await datos.guardar('mensajes', doc.id, doc);
+    st.mensajes.push(doc);
+    if (st.mensajes.length > MENSAJES_MAX) st.mensajes.splice(0, st.mensajes.length - MENSAJES_MAX);
+    bump();
+    return doc;
+  });
+  const borrarMensaje = (id, persona) => enSerie(async () => {
+    const i = st.mensajes.findIndex((m) => m.id === id);
+    if (i < 0) return false;
+    if (st.mensajes[i].quien !== persona) throw new ErrorProhibido('ajeno', 'Solo quien escribió el mensaje puede borrarlo');
+    await datos.borrar('mensajes', id);
+    st.mensajes.splice(i, 1);
+    bump();
+    return true;
+  });
+
   function conectarSSE(req, res, persona) {
     res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     res.write('retry: 3000\n\n');
@@ -127,5 +155,5 @@ export function crearEstado(datos) {
     req.on('close', () => { clearInterval(ping); clientes.delete(cliente); emitir('presencia', { enLinea: enLinea() }); });
   }
 
-  return { st, cargar, snapshot, guardarIdea, borrarIdea, guardarTarea, borrarTarea, guardarIteracion, conectarSSE, enLinea };
+  return { st, cargar, snapshot, guardarIdea, borrarIdea, guardarTarea, borrarTarea, guardarIteracion, guardarMensaje, borrarMensaje, conectarSSE, enLinea };
 }

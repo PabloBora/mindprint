@@ -1,7 +1,8 @@
 // Backend Firestore (modo Native). Credenciales por ADC: en Cloud Run, la cuenta del servicio.
 import { Firestore } from '@google-cloud/firestore';
 
-const COLS = { ideas: 'ideas', tareas: 'tareas' };
+const COLS = { ideas: 'ideas', tareas: 'tareas', mensajes: 'mensajes' };
+const MENSAJES_CARGA = 500;
 
 export function crearFirestore({ projectId } = {}) {
   const db = new Firestore(projectId ? { projectId } : {});
@@ -10,12 +11,15 @@ export function crearFirestore({ projectId } = {}) {
   return {
     nombre: 'firestore',
     async cargarTodo() {
-      const [ideas, tareas, iter, act] = await Promise.all([
-        db.collection(COLS.ideas).get(), db.collection(COLS.tareas).get(), docIter.get(), docAct.get(),
+      const [ideas, tareas, mensajes, iter, act] = await Promise.all([
+        db.collection(COLS.ideas).get(), db.collection(COLS.tareas).get(),
+        db.collection(COLS.mensajes).orderBy('fecha', 'desc').limit(MENSAJES_CARGA).get(),
+        docIter.get(), docAct.get(),
       ]);
       return {
         ideas: ideas.docs.map((d) => d.data()),
         tareas: tareas.docs.map((d) => d.data()),
+        mensajes: mensajes.docs.map((d) => d.data()).reverse(),
         iteracion: iter.exists ? iter.data() : null,
         actividad: act.exists ? (act.data().items || []) : [],
       };

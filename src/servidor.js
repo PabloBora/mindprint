@@ -65,6 +65,12 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, pro
   api.put('/iteracion', async (req, res, next) => {
     try { const doc = await estado.guardarIteracion(req.body, req.persona); res.json({ ok: true, version: estado.st.version, doc }); } catch (e) { next(e); }
   });
+  api.post('/mensajes', async (req, res, next) => {
+    try { const doc = await estado.guardarMensaje(req.body, req.persona); res.status(201).json({ ok: true, version: estado.st.version, doc }); } catch (e) { next(e); }
+  });
+  api.delete('/mensajes/:id', async (req, res, next) => {
+    try { const ok = await estado.borrarMensaje(req.params.id, req.persona); res.status(ok ? 200 : 404).json({ ok, version: estado.st.version }); } catch (e) { next(e); }
+  });
   api.post('/reto', (_req, res) => res.status(501).json({ error: 'no_disponible', detalle: 'Reto de Claude: fuera de alcance v1 (requiere API key).' }));
   app.use('/api', api);
 

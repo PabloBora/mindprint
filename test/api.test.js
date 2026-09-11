@@ -150,3 +150,31 @@ test('en producción: http redirige (308) a https, la cookie lleva Secure y hay 
     assert.match(r2.headers.get('strict-transport-security') || '', /max-age=/);
   } finally { await new Promise((r) => server.close(r)); }
 });
+
+test('mensajes: chat y comentarios con referencia; solo el autor borra', async () => {
+  const { base, cerrar } = await arrancar();
+  try {
+    const cp = await entrar(base, TOK_PABLO); const cm = await entrar(base, TOK_MAX);
+    await fetch(`${base}/api/tareas/t1`, json('PUT', cp, { titulo: 'Compartir carpeta', responsable: 'pablo' }));
+    let r = await fetch(`${base}/api/mensajes`, json('POST', cp, { texto: '   ' }));
+    assert.equal(r.status, 400); assert.equal((await r.json()).error, 'texto_requerido');
+    r = await fetch(`${base}/api/mensajes`, json('POST', cp, { texto: 'Hola equipo, arrancamos' }));
+    assert.equal(r.status, 201); let j = await r.json(); assert.equal(j.doc.quien, 'pablo'); assert.equal(j.doc.ref, null); assert.ok(j.doc.id && j.doc.fecha);
+    const idChat = j.doc.id;
+    r = await fetch(`${base}/api/mensajes`, json('POST', cm, { texto: '¿Ya quedó?', ref: { tipo: 'tarea', id: 't1', titulo: 'lo que mande el cliente' } }));
+    assert.equal(r.status, 201); j = await r.json(); assert.deepEqual(j.doc.ref, { tipo: 'tarea', id: 't1', titulo: 'Compartir carpeta' });
+    r = await fetch(`${base}/api/mensajes`, json('POST', cm, { texto: 'x', ref: { tipo: 'idea', id: 'no-existe' } }));
+    assert.equal(r.status, 400); assert.equal((await r.json()).error, 'ref_invalida');
+    r = await fetch(`${base}/api/mensajes`, json('POST', cm, { texto: 'x', ref: { tipo: 'otro', id: 't1' } }));
+    assert.equal(r.status, 400);
+    const est = await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json();
+    assert.equal(est.mensajes.length, 2); assert.equal(est.mensajes[0].id, idChat); assert.ok(est.mensajes[0].fecha <= est.mensajes[1].fecha);
+    assert.ok(!est.actividad.some((a) => a.objeto === 'mensaje'), 'los mensajes no ensucian la actividad');
+    r = await fetch(`${base}/api/mensajes/${idChat}`, { method: 'DELETE', headers: { cookie: cm } });
+    assert.equal(r.status, 403); assert.equal((await r.json()).error, 'ajeno');
+    r = await fetch(`${base}/api/mensajes/${idChat}`, { method: 'DELETE', headers: { cookie: cp } });
+    assert.equal(r.status, 200);
+    assert.equal((await fetch(`${base}/api/mensajes/${idChat}`, { method: 'DELETE', headers: { cookie: cp } })).status, 404);
+    assert.equal((await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json()).mensajes.length, 1);
+  } finally { await cerrar(); }
+});

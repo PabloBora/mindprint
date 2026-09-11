@@ -63,10 +63,13 @@ y en los logs de peticiones de Cloud Run. Es el precio de no pedir contraseña a
 
 Todo bajo `/api/*` exige la cookie; sin ella responde `401 {"error":"sin_sesion"}`.
 
-- `GET /api/estado` → `{version, yo, personas, ideas[], tareas[], iteracion, actividad[], enLinea[]}`
+- `GET /api/estado` → `{version, yo, personas, ideas[], tareas[], mensajes[], iteracion, actividad[], enLinea[]}`
 - `PUT /api/ideas/:id` · `DELETE /api/ideas/:id` — el servidor valida, sella `actualizado`/`actualizadoPor`
   y aplica el tope de 3 votos por persona (`409 {"error":"sin_votos"}`).
 - `PUT /api/tareas/:id` · `DELETE /api/tareas/:id` · `PUT /api/iteracion`
+- `POST /api/mensajes` `{texto, ref?}` → `201 {ok, version, doc}` (chat sin `ref`; comentario con `ref: {tipo: idea|tarea, id}`,
+  el servidor rellena `titulo`; ref a algo inexistente → 400) · `DELETE /api/mensajes/:id` (solo el autor; ajeno → `403 {"error":"ajeno"}`).
+  `GET /api/estado` trae `mensajes[]` (últimos 500, ascendente).
 - `GET /api/eventos` — SSE: `hola {version}` al conectar, `cambio {version}` tras cada escritura,
   `presencia {enLinea[]}` al entrar/salir alguien, `retry: 3000`, ping cada 25 s.
 - `GET /salud` → `{ok, backend, version}` (sin cookie).
@@ -78,7 +81,7 @@ Compárala con `!==`; no asumas incrementos de uno.
 ## Datos
 
 Backends intercambiables en `src/datos/` con la misma interfaz. Colecciones Firestore: `ideas`,
-`tareas`, documentos `iteracion/actual` y `actividad/reciente` (últimos 100 eventos).
+`tareas`, `mensajes` (un doc por mensaje; se cargan los últimos 500), documentos `iteracion/actual` y `actividad/reciente` (últimos 100 eventos).
 El servidor mantiene una copia en memoria y **todas las escrituras van en serie**; por eso el servicio
 corre con **una sola instancia** (`--max-instances 1`).
 
