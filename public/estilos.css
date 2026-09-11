@@ -135,6 +135,7 @@ textarea.in{resize:vertical;min-height:38px;line-height:1.4}
 .col .cards{display:grid;gap:8px;min-height:60px;border-radius:var(--r);padding:2px;transition:background .15s}
 .col.over .cards{background:var(--accent-soft);outline:1px dashed var(--accent)}
 .col.empty .cards::after{content:"arrastra una idea aquí";color:var(--line-strong);padding:10px 6px;font-size:12px;font-family:var(--mono)}
+.col[data-kind="tarea"].empty .cards::after{content:"arrastra una tarea aquí"}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:7px;text-align:left;width:100%;cursor:pointer}
 .card:hover{border-color:var(--line-strong)}
 .card.drag{opacity:.4}
@@ -152,6 +153,7 @@ textarea.in{resize:vertical;min-height:38px;line-height:1.4}
   .col{display:none} .col.active{display:block}
   .col h3{display:none}
   .col.empty .cards::after{content:"nada en esta etapa"}
+  .col[data-kind="tarea"].empty .cards::after{content:"nada en este estado"}
 }
 
 /* diálogo de idea */

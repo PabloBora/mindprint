@@ -12,7 +12,7 @@
   const STAGES = [['semilla', 'Semilla'], ['explorada', 'Explorada'], ['candidata', 'Candidata'], ['elegida', 'Elegida'], ['descartada', 'Descartada']];
   const PHASES = [['elegir', 'Elegir', 'sem 0–1'], ['entender', 'Entender', 'sem 1–2'], ['construir', 'Construir', 'sem 2–5'], ['validar', 'Presentar y validar', 'sem 5–6'], ['decidir', 'Decidir', 'cierre']];
   const FASES = Object.fromEntries([['general', 'General'], ...PHASES.map((p) => [p[0], p[1]])]);
-  const ESTADOS = [['en_curso', 'En curso'], ['pendiente', 'Pendiente'], ['bloqueada', 'Bloqueada'], ['hecha', 'Hecha']];
+  const ESTADOS = [['pendiente', 'Pendiente'], ['en_curso', 'En curso'], ['bloqueada', 'Bloqueada'], ['hecha', 'Hecha']];
   const CRIT = [['acceso', 'Acceso al cliente'], ['dolor', 'Dolor claro'], ['agentizable', 'Agentizable']];
   const REACC = [['late', 'Me late'], ['dudo', 'Dudo'], ['cliente', 'Tengo cliente']];
   const ARTEF = [['candidatos', 'Lista corta de candidatos', 'elegir'], ['mapa', 'Mapa del proceso (1 pág)', 'entender'], ['mvpdef', 'Definición del MVP (1 pág)', 'entender'], ['mvp', 'El MVP corriendo', 'construir'], ['demo', 'Guion de demo y notas de validación', 'validar'], ['decision', 'Decisión de cierre', 'decidir']];
@@ -320,7 +320,8 @@
       + `<div class="lista">${mias.length ? mias.map(itemTarea).join('') : '<div class="hint">Nada pendiente a tu nombre ni de los tres. Agrega arriba o toma algo del tablero de Tareas.</div>'}</div>`
       + '<button class="btn quiet sm more" type="button" data-act="ir" data-tab="tareas">Ver el tablero de tareas</button></section>';
     const otros = Object.keys(P()).filter((p) => p !== me);
-    h += `<section class="box"><h2>El equipo <span class="n">${S.enLinea.length} en línea</span></h2><div>${otros.map((p) => {
+    const otrosEnLinea = otros.filter((p) => S.enLinea.includes(p)).length;
+    h += `<section class="box"><h2>El equipo <span class="n">${otrosEnLinea === 0 ? 'nadie más en línea' : `${otrosEnLinea} en línea`}</span></h2><div>${otros.map((p) => {
       const suyas = S.estado.tareas.filter((t) => t.responsable === p && t.estado !== 'hecha').sort(ordenTareas);
       const lista = [...suyas.filter((t) => t.estado === 'en_curso'), ...suyas.filter((t) => t.estado === 'bloqueada'), ...suyas.filter((t) => t.estado === 'pendiente')].slice(0, 4);
       return `<div class="persona-row">${avatar(p, S.enLinea.includes(p) ? '' : 'off')}<div><div class="nom">${esc(nombre(p))}<span class="tag">${esc(P()[p].rol)}</span>${S.enLinea.includes(p) ? '<span class="pill ok">en línea</span>' : ''}</div>`
