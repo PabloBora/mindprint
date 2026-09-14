@@ -7,10 +7,15 @@ export const FASES_ITERACION = ['elegir', 'entender', 'construir', 'validar', 'd
 export const ESTADOS = ['pendiente', 'en_curso', 'bloqueada', 'hecha'];
 export const RESPONSABLES = [...Object.keys(PERSONAS), 'todos'];
 export const REACCIONES = ['', 'late', 'dudo', 'cliente'];
-export const CRITERIOS = ['acceso', 'dolor', 'agentizable'];
-// Entregables del Plan Maestro v0.2 (§10, §14), uno por fase de la iteración.
-export const ARTEFACTOS = ['caso', 'prospecto', 'mapa', 'caso_negocio', 'demo', 'doc_interna', 'propuesta', 'costos', 'decision'];
-export const ETAPAS_PROSPECTO = ['seleccion', 'descubrimiento', 'caso_negocio', 'propuesta', 'piloto', 'conversion', 'descartado'];
+// Preguntas del Plan v0.3 §3 resumidas en 4 criterios (0 no · 1 algo · 2 sí). `agentizable` viejo → `construible`.
+export const CRITERIOS = ['comun', 'dolor', 'estandar', 'construible'];
+// Entregables del Plan Maestro v0.3 (§6, §10), por fase: Detectar, Explorar, Construir, Probar, Decidir.
+export const ARTEFACTOS = ['oportunidad', 'proceso_tipo', 'solucion', 'prototipo', 'demo_doc', 'usuarios', 'senales', 'costos', 'decision'];
+// Usuarios de prueba (colección `prospectos`): gente cercana con la que se valida sin fricción.
+export const ETAPAS_PROSPECTO = ['candidato', 'contactado', 'probando', 'jala', 'descartado'];
+const MIGRA_ETAPA_PROSPECTO = { seleccion: 'candidato', descubrimiento: 'contactado', caso_negocio: 'contactado', propuesta: 'probando', piloto: 'probando', conversion: 'jala' };
+// Señales de que se vende sola (Plan v0.3 §7).
+export const SENALES = ['prueba', 'repite', 'pide', 'recomienda', 'pagaria'];
 export const SEMANAS_DEFAULT = 6;
 export const TIPOS_DECISION = ['seguir', 'ajustar', 'descartar', 'otra'];
 export const VOTOS_MAX = 3;
@@ -68,7 +73,7 @@ export function validarIdea(b) {
     autor: enumo(src.autor, Object.keys(PERSONAS), ''),
     etapa: enumo(src.etapa, ETAPAS, 'semilla'),
     votos: porPersona(src.votos, (n) => entero(n, 0, VOTOS_MAX)),
-    criterios: Object.fromEntries(CRITERIOS.map((k) => [k, entero(objeto(src.criterios)[k], 0, 2)])),
+    criterios: (() => { const c = objeto(src.criterios); const m = { ...c, construible: c.construible ?? c.agentizable }; return Object.fromEntries(CRITERIOS.map((k) => [k, entero(m[k], 0, 2)])); })(),
     reacciones: porPersona(src.reacciones, (r) => enumo(r, REACCIONES, '')),
     creado: fechaISO(src.creado),
   };
@@ -130,13 +135,13 @@ export function validarMensaje(b) {
   let ref = null;
   if (src.ref != null && src.ref !== '') {
     const r = objeto(src.ref);
-    if (!REF_TIPOS.includes(r.tipo)) falla('ref_invalida', 'ref.tipo debe ser idea o tarea');
+    if (!REF_TIPOS.includes(r.tipo)) falla('ref_invalida', `ref.tipo debe ser ${REF_TIPOS.join(', ')}`);
     ref = { tipo: r.tipo, id: idValido(r.id), titulo: texto(r.titulo, 160) };
   }
   return { texto: cuerpo, ref };
 }
 
-/** Prospecto del embudo comercial (Plan Maestro §9.2). */
+/** Usuario de prueba (colección `prospectos`): gente cercana con la que se valida; señales según Plan v0.3 §7. */
 export function validarProspecto(b) {
   const src = objeto(b);
   const empresa = texto(src.empresa, 160).trim();
@@ -146,6 +151,7 @@ export function validarProspecto(b) {
     empresa,
     contacto: texto(src.contacto, 160),
     area: texto(src.area, 120),
+    relacion: texto(src.relacion, 200),
     casoId: typeof src.casoId === 'string' && /^[A-Za-z0-9_-]{0,64}$/.test(src.casoId) ? src.casoId : '',
     razon: texto(src.razon, 600),
     dolor: texto(src.dolor, 600),
@@ -154,7 +160,8 @@ export function validarProspecto(b) {
     fechaSiguiente: fechaDia(src.fechaSiguiente),
     responsable: enumo(src.responsable, RESPONSABLES, 'todos'),
     notas: texto(src.notas, 2000),
-    etapa: enumo(src.etapa, ETAPAS_PROSPECTO, 'seleccion'),
+    senales: Object.fromEntries(SENALES.map((k) => [k, objeto(src.senales)[k] === true])),
+    etapa: enumo(MIGRA_ETAPA_PROSPECTO[src.etapa] || src.etapa, ETAPAS_PROSPECTO, 'candidato'),
     creado: fechaISO(src.creado),
   };
 }

@@ -122,8 +122,8 @@ textarea.in{resize:vertical;min-height:38px;line-height:1.4}
 .tag{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted)}
 .pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;font-family:var(--mono)}
 .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.soft{background:var(--surface-2);color:var(--ink-2)}
-.empty{color:var(--muted);font-size:14px;padding:22px 4px;line-height:1.5;max-width:60ch}
-.empty b{color:var(--ink)}
+.vacio{color:var(--muted);font-size:14px;padding:22px 4px;line-height:1.5;max-width:60ch}
+.vacio b{color:var(--ink)}
 .banner{background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--r);padding:8px 12px;font-size:13px;margin-bottom:12px}
 
 /* tablero de ideas */
@@ -319,11 +319,14 @@ span.check{cursor:default}
 .comentarios .composer{margin-top:8px}
 
 /* ---- R2d: prospectos y embudo ---- */
-.scroll-x{overflow-x:auto;padding-bottom:6px}
-@media (min-width:901px){.board.p7{grid-template-columns:repeat(7,minmax(168px,1fr));min-width:1190px}}
-.col[data-kind="prospecto"].empty .cards::after{content:"arrastra un prospecto aquí"}
-@media (max-width:900px){.col[data-kind="prospecto"].empty .cards::after{content:"nada en esta etapa"}}
 .card.prospecto .d .k{margin-right:4px}
 .seg.wrap{flex-wrap:wrap;align-items:center;gap:0}
 .seg.wrap .k{padding:0 10px}
 .toolbar .hint{max-width:60ch}
+
+/* ---- R2e: usuarios de prueba ---- */
+.senales{display:grid;gap:6px}
+.senales label{display:flex;gap:8px;align-items:center;font-size:13px;line-height:1.3}
+.senales input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none}
+.col[data-kind="prospecto"].empty .cards::after{content:"arrastra a alguien aquí"}
+@media (max-width:900px){.col[data-kind="prospecto"].empty .cards::after{content:"nadie en esta etapa"}}
