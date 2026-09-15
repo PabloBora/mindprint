@@ -2,21 +2,36 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Tablero Mindprint</title>
-<meta name="description" content="Tablero de seguimiento del equipo Mindprint: ideas, tareas e iteración.">
+<meta name="description" content="Tablero de trabajo del equipo Mindprint: hoy, tareas, usuarios de prueba, oportunidades, chat e iteración.">
+<meta name="theme-color" content="#1B1F3A">
+<meta name="color-scheme" content="light dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mindprint">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/iconos/icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/iconos/icono-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
-<link rel="stylesheet" href="/estilos.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231B1F3A'/%3E%3Cpath d='M8 23V9h3l5 8 5-8h3v14h-3v-9l-5 8-5-8v9z' fill='%23FFD84D'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/estilos/tokens.css">
+<link rel="stylesheet" href="/estilos/base.css">
+<link rel="stylesheet" href="/estilos/shell.css">
+<link rel="stylesheet" href="/estilos/componentes.css">
+<link rel="stylesheet" href="/estilos/modulos.css">
 </head>
-<body>
-<div class="wrap" id="app" aria-live="polite">
-  <div class="empty">Cargando el tablero…</div>
-</div>
-<dialog id="dlg"></dialog>
-<div class="toast" id="toast" role="status"></div>
-<script src="/app.js" defer></script>
+<body class="app cargando">
+<a class="salto" href="#vista">Ir al contenido</a>
+<nav class="lateral" id="lateral" aria-label="Módulos"></nav>
+<header class="cabecera" id="cabecera"></header>
+<main class="vista" id="vista" tabindex="-1"><div class="vacio">Cargando el tablero…</div></main>
+<nav class="inferior" id="inferior" aria-label="Módulos"></nav>
+<div class="panel-fondo" id="panel-fondo" data-act="cerrar-panel"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panel-titulo" hidden></aside>
+<dialog id="confirmar" class="dlg-confirmar"></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="/app.js"></script>
 </body>
 </html>

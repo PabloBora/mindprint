@@ -48,7 +48,13 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, pro
 
   const api = express.Router();
   api.use(requiereSesion);
-  api.get('/estado', (req, res) => res.json(estado.snapshot(req.persona)));
+  api.get('/estado', (req, res) => {
+    // ETag por versión: el cliente revalida y ahorra el cuerpo cuando nada cambió.
+    const etag = `W/"v${estado.st.version}"`;
+    res.setHeader('Cache-Control', 'no-cache'); res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag) return res.status(304).end();
+    res.json(estado.snapshot(req.persona));
+  });
   api.get('/eventos', (req, res) => estado.conectarSSE(req, res, req.persona));
   api.put('/ideas/:id', async (req, res, next) => {
     try { const doc = await estado.guardarIdea({ ...req.body, id: req.params.id }, req.persona); res.json({ ok: true, version: estado.st.version, doc }); } catch (e) { next(e); }
@@ -80,7 +86,14 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, pro
   api.post('/reto', (_req, res) => res.status(501).json({ error: 'no_disponible', detalle: 'Reto de Claude: fuera de alcance v1 (requiere API key).' }));
   app.use('/api', api);
 
-  app.use(express.static(publicDir, { index: 'index.html', maxAge: '5m', etag: true }));
+  app.use(express.static(publicDir, {
+    index: 'index.html', etag: true, maxAge: '5m',
+    setHeaders(res, ruta) {
+      if (/\/(index\.html|sw\.js|manifest\.webmanifest)$/.test(ruta)) res.setHeader('Cache-Control', 'no-cache');
+      if (ruta.endsWith('/sw.js')) res.setHeader('Service-Worker-Allowed', '/');
+      if (ruta.endsWith('.webmanifest')) res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    },
+  }));
   app.use((req, res) => { if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'no_encontrado' }); res.status(404).type('text').send('No encontrado'); });
   // eslint-disable-next-line no-unused-vars
   app.use((err, _req, res, _next) => {

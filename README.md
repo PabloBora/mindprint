@@ -21,19 +21,29 @@ npm run check        # sintaxis de todo el JS
 
 ## Interfaz
 
-`public/` es HTML + CSS + JS sin build ni dependencias (`index.html`, `estilos.css`, `app.js`). El CSP del
-servidor solo permite `script-src 'self'`, así que no hay scripts inline. La interfaz carga `/api/estado`,
-se conecta a `/api/eventos` (SSE) y, si eso falla, sondea cada 10 s. Sin sesión muestra la pantalla de
-entrada (pegar la liga personal).
+`public/` es una app sin build ni dependencias: módulos ES (`type="module"`, CSP `script-src 'self'`, sin scripts
+inline), rutas por hash y un shell de app (barra lateral en escritorio, barra inferior en móvil, cabecera con
+búsqueda, "+ Nuevo", avisos y menú de persona, panel lateral para editar). Instalable como PWA (manifest e iconos).
 
-Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, prospectos en juego, el
-equipo, pendientes de la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre y diálogo) ·
-**Prospectos** (el embudo comercial del Plan Maestro: selección → descubrimiento → caso de negocio →
-propuesta → piloto → conversión o descartado; diálogo con contacto, razón, dolor, baseline y siguiente paso) ·
-**Casos de uso** (tablero por etapa con votos y criterios; colección `ideas`) · **Chat** (mensajes del equipo con no leídos, menciones
-`@nombre`, ligas auto-enlazadas y referencias clicables) · **Iteración** (fases, datos, artefactos, decisiones) ·
-**Actividad** (todo lo que pasó, por día). Los diálogos de tarea e idea llevan al pie su hilo de comentarios,
-que son mensajes con referencia y también salen en el Chat.
+```
+public/
+  index.html            shell; carga /app.js como módulo
+  app.js                arranque: registro de módulos, ruteo, shell, panel, eventos, atajos, arrastre
+  api.js                red: /api/*, SSE con sondeo de respaldo, escrituras con upsert local
+  estado.js             estado del cliente, constantes del método (Plan v0.3), helpers de datos
+  ruta.js               rutas #/<modulo>[/<id>] (puras, se prueban en Node)
+  ui/base.js            escape, fechas, iconos SVG, avatar, toast (con Deshacer), confirmar, panel, foco
+  ui/piezas.js          tarjetas, renglones, señales, comentarios, actividad, mensajes
+  modulos/<nombre>.js   un módulo = un archivo: { id, titulo, icono, orden, principal, nuevo, badge, hot,
+                        vista(), panel(id), acciones{}, binds{}, submits{}, filtros(), alMostrar(), alSalir() }
+  estilos/{tokens,base,shell,componentes,modulos}.css
+  manifest.webmanifest, iconos/
+```
+
+Agregar un módulo = un archivo en `modulos/` registrado en `app.js`. Atajos: `/` buscar, `n` nuevo en el módulo,
+`g` + `h/t/u/o/c/i/a` ir a un módulo, `Escape` cierra menú o panel. Pestañas: **Hoy**, **Tareas**, **Usuarios de
+prueba**, **Oportunidades**, **Chat**, **Iteración**, **Actividad**. Cada elemento se abre en el panel lateral con
+su ruta (`#/tareas/<id>`), así una liga abre directo la tarea.
 
 ## Configuración
 
@@ -71,8 +81,8 @@ Todo bajo `/api/*` exige la cookie; sin ella responde `401 {"error":"sin_sesion"
 - `PUT /api/ideas/:id` · `DELETE /api/ideas/:id` — el servidor valida, sella `actualizado`/`actualizadoPor`
   y aplica el tope de 3 votos por persona (`409 {"error":"sin_votos"}`).
 - `PUT /api/tareas/:id` · `DELETE /api/tareas/:id` · `PUT /api/prospectos/:id` · `DELETE /api/prospectos/:id` · `PUT /api/iteracion`
-  (la iteración lleva `semanas` 4–8 y los 9 artefactos del Plan Maestro: caso, prospecto, mapa, caso_negocio, demo,
-  doc_interna, propuesta, costos, decision)
+  (la iteración lleva `semanas` 4–8 y los 9 artefactos del Plan v0.3: oportunidad, proceso_tipo, solucion, prototipo,
+  demo_doc, usuarios, senales, costos, decision; los prospectos llevan `senales` y `relacion`)
 - `POST /api/mensajes` `{texto, ref?}` → `201 {ok, version, doc}` (chat sin `ref`; comentario con `ref: {tipo: idea|tarea|prospecto, id}`,
   el servidor rellena `titulo`; ref a algo inexistente → 400) · `DELETE /api/mensajes/:id` (solo el autor; ajeno → `403 {"error":"ajeno"}`).
   `GET /api/estado` trae `mensajes[]` (últimos 500, ascendente).

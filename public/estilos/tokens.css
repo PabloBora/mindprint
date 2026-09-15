@@ -1,0 +1,42 @@
+/* Tokens de diseño. Claro en :root; oscuro en los dos bloques (sistema y elección explícita). */
+:root{
+  --paper:#F1F2EE; --surface:#FFFFFF; --surface-2:#E9EBE5; --surface-3:#DFE2DB; --line:#D5D8D0; --line-strong:#B4B8AE;
+  --ink:#1B1F3A; --ink-2:#4A4F66; --muted:#6B7080;
+  --accent:#0E6B5C; --accent-ink:#FFFFFF; --accent-soft:#DDEFEA;
+  --marker:#FFD84D; --marker-ink:#1B1F3A;
+  --ok:#2A7F4F; --warn:#B8770A; --bad:#B23A3A;
+  --ok-soft:#DFF0E5; --warn-soft:#FBEBCF; --bad-soft:#F6DEDE;
+  --p-pablo:#0E6B5C; --p-max:#4F5FBF; --p-daniel:#B45309; --p-todos:#6B7080;
+  --shadow:0 12px 32px rgba(27,31,58,.14); --shadow-panel:-8px 0 40px rgba(27,31,58,.18);
+  --r:8px; --r-sm:5px; --r-lg:12px;
+  --display:"Fraunces",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --lateral:232px; --cab:56px; --inferior:64px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#15172A; --surface:#1E2138; --surface-2:#262A45; --surface-3:#2F3452; --line:#343858; --line-strong:#4A4F70;
+    --ink:#E8E9F0; --ink-2:#C2C5D6; --muted:#9AA0B4;
+    --accent:#3FB79F; --accent-ink:#0F1A17; --accent-soft:#1F3B36;
+    --marker:#E3BE2E; --marker-ink:#1B1F3A;
+    --ok:#5CC48A; --warn:#E0A43A; --bad:#E06B6B;
+    --ok-soft:#1E3A2B; --warn-soft:#3F3116; --bad-soft:#40201F;
+    --p-pablo:#3FB79F; --p-max:#8C9BF0; --p-daniel:#E59A3C; --p-todos:#9AA0B4;
+    --shadow:0 12px 32px rgba(0,0,0,.5); --shadow-panel:-8px 0 40px rgba(0,0,0,.55);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#15172A; --surface:#1E2138; --surface-2:#262A45; --surface-3:#2F3452; --line:#343858; --line-strong:#4A4F70;
+  --ink:#E8E9F0; --ink-2:#C2C5D6; --muted:#9AA0B4;
+  --accent:#3FB79F; --accent-ink:#0F1A17; --accent-soft:#1F3B36;
+  --marker:#E3BE2E; --marker-ink:#1B1F3A;
+  --ok:#5CC48A; --warn:#E0A43A; --bad:#E06B6B;
+  --ok-soft:#1E3A2B; --warn-soft:#3F3116; --bad-soft:#40201F;
+  --p-pablo:#3FB79F; --p-max:#8C9BF0; --p-daniel:#E59A3C; --p-todos:#9AA0B4;
+  --shadow:0 12px 32px rgba(0,0,0,.5); --shadow-panel:-8px 0 40px rgba(0,0,0,.55);
+  color-scheme:dark;
+}
