@@ -19,7 +19,7 @@ const ATAJOS = [
   ['?', 'Esta ayuda'],
 ];
 export function panelAyuda(version = '') {
-  const html = `<div class="ayuda">
+  const html = `<div class="panel-ayuda">
     <section><h3>Pestañas</h3><div class="lista-ayuda">${PESTANAS.map(([ic, n, d]) => `<div class="fila">${icono(ic)}<div><b>${esc(n)}</b><span>${esc(d)}</span></div></div>`).join('')}</div></section>
     <section><h3>Atajos de teclado</h3><div class="atajos">${ATAJOS.map(([k, d]) => `<kbd>${esc(k)}</kbd><span>${esc(d)}</span>`).join('')}</div></section>
     <section><h3>Cómo se guarda</h3><div class="texto">

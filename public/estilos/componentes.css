@@ -136,8 +136,8 @@ span.check{cursor:default}
 @media (max-width:900px){.card .mover{opacity:1}}
 
 /* panel de ayuda */
-.ayuda{display:grid;gap:18px}
-.ayuda h3{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.panel-ayuda{display:grid;gap:18px}
+.panel-ayuda h3{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
 .lista-ayuda{display:grid;gap:8px}
 .lista-ayuda .fila{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:14px}
 .lista-ayuda .fila .ic{color:var(--muted);margin-top:1px}
@@ -145,4 +145,4 @@ span.check{cursor:default}
 .lista-ayuda .fila span{color:var(--ink-2);font-size:13px;line-height:1.4}
 .atajos{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;font-size:14px}
 .atajos kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;padding:2px 7px;background:var(--surface);white-space:nowrap;justify-self:start}
-.ayuda .texto{display:grid;gap:8px;font-size:14px;color:var(--ink-2);line-height:1.5}
+.panel-ayuda .texto{display:grid;gap:8px;font-size:14px;color:var(--ink-2);line-height:1.5}

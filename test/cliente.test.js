@@ -57,7 +57,7 @@ test('paneles: edición y alta renderizan; un id inexistente devuelve null; las 
 
 test('panel de ayuda y esqueletos: renderizan sin datos, con atajos, pestañas y sin HTML inseguro', async () => {
   const { panelAyuda } = await import('../public/ui/ayuda.js');
-  const a = panelAyuda('rev-<7>'); assert.equal(a.titulo, 'Ayuda y atajos');
+  const a = panelAyuda('rev-<7>'); assert.equal(a.titulo, 'Ayuda y atajos'); assert.ok(a.html.includes('class="panel-ayuda"'));
   for (const k of ['/', 'n', 'g h', 'Esc', '?']) assert.ok(a.html.includes(`<kbd>${k}</kbd>`), `atajo ${k}`);
   for (const m of ['Hoy', 'Tareas', 'Usuarios de prueba', 'Oportunidades', 'Chat', 'Iteración', 'Actividad']) assert.ok(a.html.includes(`<b>${m}</b>`), `pestaña ${m}`);
   assert.ok(a.html.includes('class="tag">versión rev-&lt;7&gt;<'), 'la versión se escapa'); assert.ok(!panelAyuda('').html.includes('class="tag">versión'), 'sin versión no se pinta la línea');

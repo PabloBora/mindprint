@@ -152,7 +152,7 @@ document.addEventListener('click', async (e) => {
   if (act === 'cerrar-panel') { if (S.ayuda) { cerrarAyuda(); return; } reemplazar(rutaDe(S.ruta.mod)); return; }
   if (act === 'abrir') { recordarFoco(`[data-act="abrir"][data-mod="${el.dataset.mod}"][data-id="${el.dataset.id}"]`); ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
   if (act === 'abrir-res') { S.busqAbierta = false; S.busqIdx = -1; S.q = ''; ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
-  if (act === 'ayuda') { S.menuAbierto = null; recordarFoco('[data-act="ayuda"]'); S.ayuda = true; render(); return; }
+  if (act === 'ayuda') { recordarFoco(el.closest('#lateral') ? '#lateral [data-act="ayuda"]' : S.menuAbierto === 'mas' ? '[data-menu="mas"]' : '[data-menu="persona"]'); S.menuAbierto = null; S.ayuda = true; render(); return; }
   if (act === 'salir') { cola.limpiar(); return; } // el enlace sigue a /salir; lo pendiente de otra sesión no debe quedarse en este navegador
   if (act === 'actualizar') { if (S.versionNueva) S.versionNueva(); return; }
   if (act === 'reintentar') { S.conexion = 'conectando'; render(); await cargarEstado(); if (S.estado && !S.sinSesion) reconectar(); return; }
@@ -200,7 +200,7 @@ document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && res.length) { e.preventDefault(); (res[Math.max(0, S.busqIdx)]).click(); return; }
     if (e.key === 'Escape') { e.preventDefault(); S.q = ''; S.busqAbierta = false; S.busqIdx = -1; e.target.blur(); render(); return; }
   }
-  if (e.key === 'Escape') { if (S.menuAbierto) { S.menuAbierto = null; S.mover = null; renderShell(); return; } if (S.ayuda) { cerrarAyuda(); return; } if (panelAbierto()) { reemplazar(rutaDe(S.ruta.mod)); return; } }
+  if (e.key === 'Escape') { if (S.busqAbierta) { S.busqAbierta = false; S.busqIdx = -1; renderShell(); const q = $('q'); if (q) q.focus(); return; } if (S.menuAbierto) { S.menuAbierto = null; S.mover = null; renderShell(); return; } if (S.ayuda) { cerrarAyuda(); return; } if (panelAbierto()) { reemplazar(rutaDe(S.ruta.mod)); return; } }
   const enCampo = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable);
   if (e.key === 'Enter' && e.target.closest && e.target.closest('.card[data-act]') && !e.target.closest('button')) { e.preventDefault(); e.target.closest('.card').click(); return; }
   if (e.key === 'Enter' && !e.shiftKey && e.target.tagName === 'TEXTAREA' && e.target.closest && e.target.closest('form[data-submit="add-msg"]')) { e.preventDefault(); const f = e.target.closest('form'); if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); return; }

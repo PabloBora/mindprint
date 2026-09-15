@@ -64,10 +64,11 @@ let vaciando = false;
 export async function vaciarCola() {
   if (vaciando || !cola.largo) return;
   vaciando = true; bus.emit('cola');
+  let descartadas = 0;
   try {
-    const ok = await cola.vaciar(async (op) => { try { await api(op.metodo, op.ruta, op.cuerpo); return true; } catch (e) { if (esErrorDeRed(e)) return false; if (e.code === 'sin_sesion') throw e; return true; /* el servidor la rechazó: se descarta y el estado real manda */ } });
-    if (ok) await cargarEstado();
-  } catch { /* sin sesión: ya se avisó */ }
+    const ok = await cola.vaciar(async (op) => { try { await api(op.metodo, op.ruta, op.cuerpo); return true; } catch (e) { if (esErrorDeRed(e)) return false; if (e.code === 'sin_sesion') throw e; descartadas++; return true; /* el servidor la rechazó: se descarta y el estado real manda */ } });
+    if (ok || descartadas) await cargarEstado(); // si algo se descartó, el estado real reemplaza lo optimista aunque falte por enviar
+  } catch (e) { if (e.code !== 'sin_sesion') console.error(e); }
   finally { vaciando = false; bus.emit('cola'); }
 }
 /** Vuelve a aplicar sobre el estado recién cargado lo que sigue en la cola (una foto vieja del service worker o una
@@ -77,7 +78,7 @@ export function aplicarColaLocal() {
     const m = /^\/api\/(ideas|tareas|prospectos)\/([^/]+)$/.exec(op.ruta);
     if (m) { const col = m[1]; const id = decodeURIComponent(m[2]); if (!Array.isArray(S.estado[col])) S.estado[col] = []; if (op.metodo === 'DELETE') S.estado[col] = S.estado[col].filter((x) => x.id !== id); else upsert(S.estado[col], sello({ ...op.cuerpo, id })); continue; }
     if (op.ruta === '/api/iteracion' && op.cuerpo) { S.estado.iteracion = { ...op.cuerpo }; continue; }
-    if (op.ruta === '/api/mensajes' && op.metodo === 'POST' && op.cuerpo) { S.estado.mensajes.push({ id: `pendiente-${op.ts}`, fecha: new Date(op.ts || Date.now()).toISOString(), quien: yo(), texto: op.cuerpo.texto, ref: op.cuerpo.ref ? { ...op.cuerpo.ref, titulo: '' } : null, _pendiente: true }); continue; }
+    if (op.ruta === '/api/mensajes' && op.metodo === 'POST' && op.cuerpo) { S.estado.mensajes.push({ id: `pendiente-${op.clave}`, fecha: new Date(op.ts || Date.now()).toISOString(), quien: yo(), texto: op.cuerpo.texto, ref: op.cuerpo.ref ? { ...op.cuerpo.ref, titulo: '' } : null, _pendiente: true }); continue; }
     const d = /^\/api\/mensajes\/([^/]+)$/.exec(op.ruta); if (d && op.metodo === 'DELETE') S.estado.mensajes = S.estado.mensajes.filter((x) => x.id !== decodeURIComponent(d[1]));
   }
 }
@@ -103,8 +104,13 @@ export const borrarTarea = (id) => escribir({ metodo: 'DELETE', ruta: `/api/tare
 export const guardarProspecto = (p) => escribir({ metodo: 'PUT', ruta: `/api/prospectos/${encodeURIComponent(p.id)}`, cuerpo: sinSellos(p), clave: `prospectos/${p.id}`, alExito: (j) => { upsert(S.estado.prospectos, j.doc); S.estado.version = j.version; }, local: () => upsert(S.estado.prospectos, sello(p)) });
 export const borrarProspecto = (id) => escribir({ metodo: 'DELETE', ruta: `/api/prospectos/${encodeURIComponent(id)}`, clave: `prospectos/${id}/borrar`, alExito: (j) => { S.estado.prospectos = S.estado.prospectos.filter((x) => x.id !== id); S.estado.version = j.version; }, local: () => { S.estado.prospectos = S.estado.prospectos.filter((x) => x.id !== id); } });
 export const guardarIteracion = (it) => escribir({ metodo: 'PUT', ruta: '/api/iteracion', cuerpo: it, clave: 'iteracion', alExito: (j) => { S.estado.iteracion = j.doc; S.estado.version = j.version; }, local: () => { S.estado.iteracion = { ...it }; } });
-export const enviarMensaje = (texto, ref) => escribir({ metodo: 'POST', ruta: '/api/mensajes', cuerpo: ref ? { texto, ref } : { texto }, clave: `mensajes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, alExito: (j) => { S.estado.mensajes.push(j.doc); S.estado.version = j.version; if (!ref || S.ruta.mod === 'chat') { S.leido = j.doc.fecha; lsSet('mp.chat.leido', j.doc.fecha); } }, local: () => { S.estado.mensajes.push({ id: `pendiente-${Date.now()}`, fecha: ahora(), quien: yo(), texto, ref: ref ? { ...ref, titulo: '' } : null, _pendiente: true }); } });
-export const borrarMensaje = (id) => escribir({ metodo: 'DELETE', ruta: `/api/mensajes/${encodeURIComponent(id)}`, clave: `mensajes/${id}/borrar`, alExito: (j) => { S.estado.mensajes = S.estado.mensajes.filter((m) => m.id !== id); S.estado.version = j.version; }, local: () => { S.estado.mensajes = S.estado.mensajes.filter((m) => m.id !== id); } });
+// El servidor asigna el id del mensaje; sin red el mensaje se pinta con un id provisional `pendiente-<clave>` que recuerda
+// su operación en la cola, para que borrarlo antes de que salga retire el POST en vez de mandar un DELETE que nunca coincidiría.
+export const enviarMensaje = (texto, ref) => { const clave = `mensajes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`; return escribir({ metodo: 'POST', ruta: '/api/mensajes', cuerpo: ref ? { texto, ref } : { texto }, clave, alExito: (j) => { S.estado.mensajes.push(j.doc); S.estado.version = j.version; if (!ref || S.ruta.mod === 'chat') { S.leido = j.doc.fecha; lsSet('mp.chat.leido', j.doc.fecha); } }, local: () => { S.estado.mensajes.push({ id: `pendiente-${clave}`, fecha: ahora(), quien: yo(), texto, ref: ref ? { ...ref, titulo: '' } : null, _pendiente: true }); } }); };
+export const borrarMensaje = (id) => {
+  if (String(id).startsWith('pendiente-')) { cola.quitar(String(id).slice('pendiente-'.length)); S.estado.mensajes = S.estado.mensajes.filter((m) => m.id !== id); bus.emit('cola'); bus.emit('estado'); return Promise.resolve(true); }
+  return escribir({ metodo: 'DELETE', ruta: `/api/mensajes/${encodeURIComponent(id)}`, clave: `mensajes/${id}/borrar`, alExito: (j) => { S.estado.mensajes = S.estado.mensajes.filter((m) => m.id !== id); S.estado.version = j.version; }, local: () => { S.estado.mensajes = S.estado.mensajes.filter((m) => m.id !== id); } });
+};
 
 /** Marca el chat como leído hasta el último mensaje (llamar al ver la pestaña). */
 export function marcarLeido() {

@@ -20,6 +20,15 @@ test('la cola dedupe por clave, persiste y vacía en orden hasta el primer fallo
   assert.equal(crearCola({ storage: null }).largo, 0);
 });
 
+test('quitar retira una operación por clave y vaciar propaga excepciones sin tocar la cola', async () => {
+  const c = crearCola({ storage: null });
+  c.agregar({ clave: 'mensajes/a', metodo: 'POST', ruta: '/api/mensajes', cuerpo: { texto: 'a' } });
+  c.agregar({ clave: 'mensajes/b', metodo: 'POST', ruta: '/api/mensajes', cuerpo: { texto: 'b' } });
+  assert.equal(c.tiene('mensajes/a'), true); assert.equal(c.quitar('mensajes/a'), true); assert.equal(c.quitar('mensajes/a'), false); assert.equal(c.largo, 1);
+  await assert.rejects(c.vaciar(async () => { const e = new Error('sin_sesion'); e.code = 'sin_sesion'; throw e; }), { code: 'sin_sesion' });
+  assert.equal(c.largo, 1, 'una excepción no descarta ni avanza la cola');
+});
+
 test('esErrorDeRed distingue fallos de fetch de respuestas del servidor', () => {
   assert.equal(esErrorDeRed(Object.assign(new Error('Sin conexión'), { code: 'red' })), true);
   assert.equal(esErrorDeRed(new TypeError('Failed to fetch')), true);

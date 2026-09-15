@@ -8,9 +8,13 @@ export function crearCola({ storage = null, clave = 'mp.cola' } = {}) {
     get items() { return items.slice(); },
     /** Una operación por clave (la última gana): {clave, metodo, ruta, cuerpo}. */
     agregar(op) { items = items.filter((o) => o.clave !== op.clave); items.push({ ...op, ts: Date.now() }); persistir(); },
-    /** Envía en orden con `enviar(op) → Promise<boolean>`; se detiene en el primer fallo de red y conserva lo que falta. */
+    /** Quita una operación que ya no debe enviarse (p. ej. se borró un mensaje que aún no salía). */
+    quitar(clave) { const antes = items.length; items = items.filter((o) => o.clave !== clave); if (items.length !== antes) persistir(); return items.length !== antes; },
+    tiene(clave) { return items.some((o) => o.clave === clave); },
+    /** Envía en orden con `enviar(op) → Promise<boolean>`: `false` = fallo de red (se detiene y conserva lo que falta);
+        una excepción se propaga tal cual (no se confunde con un fallo de red). */
     async vaciar(enviar) {
-      while (items.length) { const op = items[0]; let ok = false; try { ok = await enviar(op); } catch { ok = false; } if (!ok) return false; items.shift(); persistir(); }
+      while (items.length) { const op = items[0]; const ok = await enviar(op); if (!ok) return false; items.shift(); persistir(); }
       return true;
     },
     limpiar() { items = []; persistir(); },
