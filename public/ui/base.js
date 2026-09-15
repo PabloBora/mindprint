@@ -103,7 +103,9 @@ export function restoreFocus(root, k) {
 export function setPath(o, path, v) { const ks = path.split('.'); let cur = o; for (let i = 0; i < ks.length - 1; i++) { if (typeof cur[ks[i]] !== 'object' || cur[ks[i]] === null) cur[ks[i]] = {}; cur = cur[ks[i]]; } cur[ks[ks.length - 1]] = v; }
 
 /* ---------- panel lateral (drawer) con foco atrapado ---------- */
-let devolverFoco = null;
+let devolverFoco = null; let selectorFoco = null;
+/** Quién abrió el panel, como selector: el elemento se destruye al re-renderizar la vista, así que se busca al cerrar. */
+export function recordarFoco(selector) { selectorFoco = selector; }
 const FOCABLES = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 export function panelAbierto() { const p = document.getElementById('panel'); return !!(p && !p.hidden); }
 export function abrirPanel({ titulo = '', html = '', pie = '' }) {
@@ -111,7 +113,7 @@ export function abrirPanel({ titulo = '', html = '', pie = '' }) {
   const yaAbierto = !p.hidden;
   if (!yaAbierto) devolverFoco = document.activeElement;
   const keep = captureFocus(p);
-  p.innerHTML = `<div class="panel-cab"><button type="button" class="btn quiet icono" data-act="cerrar-panel" aria-label="Cerrar">${icono('cerrar')}</button><h2 class="panel-titulo">${titulo}</h2></div><div class="panel-cuerpo">${html}</div>${pie ? `<div class="panel-pie">${pie}</div>` : ''}`;
+  p.innerHTML = `<div class="panel-cab"><button type="button" class="btn quiet icono" data-act="cerrar-panel" aria-label="Cerrar">${icono('cerrar')}</button><h2 class="panel-titulo" id="panel-titulo">${titulo}</h2></div><div class="panel-cuerpo">${html}</div>${pie ? `<div class="panel-pie">${pie}</div>` : ''}`;
   p.hidden = false; document.body.classList.add('con-panel');
   if (keep) restoreFocus(p, keep);
   else if (!yaAbierto) { const f = p.querySelector('.panel-cuerpo ' + FOCABLES) || p.querySelector(FOCABLES); if (f) f.focus({ preventScroll: true }); }
@@ -119,8 +121,9 @@ export function abrirPanel({ titulo = '', html = '', pie = '' }) {
 export function cerrarPanel() {
   const p = document.getElementById('panel'); if (!p || p.hidden) return;
   p.hidden = true; p.innerHTML = ''; document.body.classList.remove('con-panel');
-  if (devolverFoco && devolverFoco.focus) { try { devolverFoco.focus({ preventScroll: true }); } catch { /* fuera del DOM */ } }
-  devolverFoco = null;
+  const origen = (selectorFoco && document.querySelector(selectorFoco)) || (devolverFoco && devolverFoco.isConnected ? devolverFoco : null);
+  if (origen && origen.focus) { try { origen.focus({ preventScroll: true }); } catch { /* fuera del DOM */ } }
+  devolverFoco = null; selectorFoco = null;
 }
 /** Mantiene Tab dentro del panel mientras esté abierto. Llamar desde el keydown global. */
 export function atraparFoco(e) {

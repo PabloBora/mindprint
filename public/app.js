@@ -2,7 +2,7 @@
    panel lateral, delegación de eventos, atajos y arrastre. Los módulos viven en ./modulos/. */
 import { S, P, yo, nombre, tareas, esMia, noLeidos, lsSet, lsGet, ideaById, tareaById, prospectoById } from './estado.js';
 import { parsear, actual, ir, reemplazar, escuchar, rutaDe } from './ruta.js';
-import { esc, icono, avatar, toast, bus, captureFocus, restoreFocus, abrirPanel, cerrarPanel, panelAbierto, atraparFoco, hoy } from './ui/base.js';
+import { esc, icono, avatar, toast, bus, captureFocus, restoreFocus, abrirPanel, cerrarPanel, panelAbierto, atraparFoco, recordarFoco, hoy } from './ui/base.js';
 import { cargarEstado, conectarSSE, iniciarRespaldo, guardarIdea, guardarTarea, guardarProspecto } from './api.js';
 import hoyMod from './modulos/hoy.js';
 import tareasMod from './modulos/tareas.js';
@@ -99,7 +99,7 @@ document.addEventListener('click', async (e) => {
   if (act === 'ir') { S.menuAbierto = null; ir(el.dataset.ruta); return; }
   if (act === 'tema') { S.tema = el.dataset.v; lsSet('mp.tema', S.tema); aplicarTema(); S.menuAbierto = null; renderShell(); return; }
   if (act === 'cerrar-panel') { reemplazar(rutaDe(S.ruta.mod)); return; }
-  if (act === 'abrir') { ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
+  if (act === 'abrir') { recordarFoco(`[data-act="abrir"][data-mod="${el.dataset.mod}"][data-id="${el.dataset.id}"]`); ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
   for (const mod of MODULOS.values()) { const fn = mod.acciones && mod.acciones[act]; if (fn) { await fn(el, e); return; } }
 });
 document.addEventListener('submit', async (e) => {
@@ -152,9 +152,10 @@ document.addEventListener('dragleave', (e) => { const col = e.target.closest && 
 document.addEventListener('drop', async (e) => {
   const col = e.target.closest && e.target.closest('.col[data-col]'); if (!col || !S.arrastrando) return; e.preventDefault();
   const id = S.arrastrando; const destino = col.dataset.col; const kind = col.dataset.kind; S.arrastrando = null; col.classList.remove('over');
-  if (kind === 'tarea') { const t = tareaById(id); if (t && t.estado !== destino) await guardarTarea({ ...t, estado: destino }); return; }
-  if (kind === 'prospecto') { const p = prospectoById(id); if (p && p.etapa !== destino) await guardarProspecto({ ...p, etapa: destino }); return; }
-  const i = ideaById(id); if (i && i.etapa !== destino) await guardarIdea({ ...i, etapa: destino });
+  const etiqueta = col.querySelector('h3 span') ? col.querySelector('h3 span').textContent : destino;
+  if (kind === 'tarea') { const t = tareaById(id); if (t && t.estado !== destino && await guardarTarea({ ...t, estado: destino })) toast(`«${t.titulo}» → ${etiqueta}`); return; }
+  if (kind === 'prospecto') { const p = prospectoById(id); if (p && p.etapa !== destino && await guardarProspecto({ ...p, etapa: destino })) toast(`«${p.empresa}» → ${etiqueta}`); return; }
+  const i = ideaById(id); if (i && i.etapa !== destino && await guardarIdea({ ...i, etapa: destino })) toast(`«${i.titulo}» → ${etiqueta}`);
 });
 
 /* ---------- ruteo y arranque ---------- */

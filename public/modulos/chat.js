@@ -1,6 +1,6 @@
 /* Chat del equipo; también procesa los comentarios (mensajes con referencia) de los paneles. */
 import { S, mensajes, noLeidos } from '../estado.js';
-import { esc, icono, diaDe, etiquetaDia } from '../ui/base.js';
+import { esc, icono, diaDe, etiquetaDia, confirmar, toast } from '../ui/base.js';
 import { itemMsg } from '../ui/piezas.js';
 import { enviarMensaje, borrarMensaje, marcarLeido } from '../api.js';
 
@@ -30,7 +30,10 @@ export default {
   badge: () => (noLeidos() ? String(noLeidos()) : ''), hot: () => noLeidos() > 0,
   vista, alMostrar,
   alSalir: () => { S.leidoAlAbrir = null; },
-  acciones: { 'del-msg': async (el) => { await borrarMensaje(el.dataset.id); } },
+  acciones: {
+    // Sin Deshacer: reenviar el texto crearía un mensaje nuevo con otra hora y otro orden.
+    'del-msg': async (el) => { if (!(await confirmar({ titulo: 'Borrar tu mensaje', texto: 'Se borra para los tres y no se puede deshacer.', ok: 'Borrar', peligro: true }))) return; if (await borrarMensaje(el.dataset.id)) toast('Mensaje borrado'); },
+  },
   submits: {
     'add-msg': async (form) => {
       const ta = form.querySelector('textarea'); const texto = (ta.value || '').trim(); if (!texto) return;
