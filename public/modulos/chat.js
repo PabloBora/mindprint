@@ -1,5 +1,6 @@
 /* Chat del equipo; también procesa los comentarios (mensajes con referencia) de los paneles. */
 import { S, mensajes, noLeidos } from '../estado.js';
+import { rutaDe, reemplazar } from '../ruta.js';
 import { esc, icono, diaDe, etiquetaDia, confirmar, toast } from '../ui/base.js';
 import { itemMsg } from '../ui/piezas.js';
 import { enviarMensaje, borrarMensaje, marcarLeido } from '../api.js';
@@ -22,6 +23,11 @@ function alMostrar() {
   if (S.leidoAlAbrir == null) S.leidoAlAbrir = S.leido;
   marcarLeido();
   const log = document.getElementById('chat-log'); if (!log) return;
+  if (S.ruta.id) { // llegar desde la búsqueda global a un mensaje concreto
+    const el = log.querySelector(`[data-msg="${CSS.escape(S.ruta.id)}"]`);
+    if (el) { S.resaltado = S.ruta.id; el.scrollIntoView({ block: 'center' }); abajo = false; scrollPrev = log.scrollTop; }
+    reemplazar(rutaDe('chat')); return;
+  }
   log.scrollTop = abajo ? log.scrollHeight : scrollPrev;
   log.addEventListener('scroll', () => { abajo = log.scrollHeight - log.scrollTop - log.clientHeight < 80; scrollPrev = log.scrollTop; });
 }
@@ -29,7 +35,7 @@ export default {
   id: 'chat', titulo: 'Chat', icono: 'chat', orden: 5, principal: true,
   badge: () => (noLeidos() ? String(noLeidos()) : ''), hot: () => noLeidos() > 0,
   vista, alMostrar,
-  alSalir: () => { S.leidoAlAbrir = null; },
+  alSalir: () => { S.leidoAlAbrir = null; S.resaltado = ''; },
   acciones: {
     // Sin Deshacer: reenviar el texto crearía un mensaje nuevo con otra hora y otro orden.
     'del-msg': async (el) => { if (!(await confirmar({ titulo: 'Borrar tu mensaje', texto: 'Se borra para los tres y no se puede deshacer.', ok: 'Borrar', peligro: true }))) return; if (await borrarMensaje(el.dataset.id)) toast('Mensaje borrado'); },

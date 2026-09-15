@@ -29,21 +29,41 @@ búsqueda, "+ Nuevo", avisos y menú de persona, panel lateral para editar). Ins
 public/
   index.html            shell; carga /app.js como módulo
   app.js                arranque: registro de módulos, ruteo, shell, panel, eventos, atajos, arrastre
-  api.js                red: /api/*, SSE con sondeo de respaldo, escrituras con upsert local
+  api.js                red: /api/*, SSE con sondeo de respaldo, escrituras optimistas con cola sin red,
+                        registro del service worker y aviso de versión nueva
+  cola.js               cola de escrituras pendientes (localStorage), una por clave; se prueba en Node
+  buscar.js             búsqueda global (tareas, usuarios, oportunidades, mensajes); pura
   estado.js             estado del cliente, constantes del método (Plan v0.3), helpers de datos
   ruta.js               rutas #/<modulo>[/<id>] (puras, se prueban en Node)
+  sw.js                 service worker: shell por versión + última foto de /api/estado para leer sin red
   ui/base.js            escape, fechas, iconos SVG, avatar, toast (con Deshacer), confirmar, panel, foco
-  ui/piezas.js          tarjetas, renglones, señales, comentarios, actividad, mensajes
+  ui/piezas.js          tarjetas, renglones, señales, comentarios, actividad, mensajes, esqueletos
+  ui/ayuda.js           panel de ayuda (?) : pestañas, atajos, cómo se guarda
   modulos/<nombre>.js   un módulo = un archivo: { id, titulo, icono, orden, principal, nuevo, badge, hot,
                         vista(), panel(id), acciones{}, binds{}, submits{}, filtros(), alMostrar(), alSalir() }
   estilos/{tokens,base,shell,componentes,modulos}.css
   manifest.webmanifest, iconos/
 ```
 
-Agregar un módulo = un archivo en `modulos/` registrado en `app.js`. Atajos: `/` buscar, `n` nuevo en el módulo,
-`g` + `h/t/u/o/c/i/a` ir a un módulo, `Escape` cierra menú o panel. Pestañas: **Hoy**, **Tareas**, **Usuarios de
+Agregar un módulo = un archivo en `modulos/` registrado en `app.js` **y en la lista `SHELL` de `sw.js`** (una
+prueba lo verifica). Atajos: `/` buscar en todo, `n` nuevo en el módulo, `g` + `h/t/u/o/c/i/a` ir a un módulo,
+`?` ayuda, `Escape` cierra menú, panel o búsqueda. Pestañas: **Hoy**, **Tareas**, **Usuarios de
 prueba**, **Oportunidades**, **Chat**, **Iteración**, **Actividad**. Cada elemento se abre en el panel lateral con
 su ruta (`#/tareas/<id>`), así una liga abre directo la tarea.
+
+**Guardado y red.** Cada cambio se manda al momento y la cabecera dice «guardando…» / «guardado». Si el servidor
+responde con error se avisa y, si fue 5xx, el toast ofrece «Reintentar». Si no hay red, el cambio se aplica en
+pantalla (tarjeta punteada «por enviar»), se guarda en `localStorage` (`mp.cola`, una operación por documento, la
+última gana) y se envía en orden al volver la red (evento `online`, sondeo de 10 s o el botón «N por enviar» de la
+cabecera). Una operación que el servidor rechaza se descarta y manda el estado real. Al salir se vacía la cola.
+
+**Service worker.** El servidor sirve `/sw.js` con la versión del deploy inyectada (`K_REVISION` en Cloud Run,
+`dev-<hora>` en local; `/version.json` la expone). Cada versión precachea el shell completo en su propia caché
+(`mindprint-<versión>`, con `cache: 'reload'` para saltar la caché HTTP) y lo sirve siempre desde ahí: nunca se
+mezclan archivos de dos deploys. `/api/estado` va a la red y, si falla, se devuelve la última copia con la
+cabecera `X-Mindprint-Offline: 1`; la app muestra el aviso «Sin conexión» y sigue funcionando en lectura y con la
+cola. Cuando hay versión nueva, la app la instala aparte y ofrece «Actualizar» (cabecera y toast); al aceptar,
+el SW nuevo toma control y la página se recarga. `/salir` borra la copia del estado.
 
 ## Configuración
 

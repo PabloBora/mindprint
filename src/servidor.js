@@ -86,6 +86,12 @@ export async function crearApp({ secreto, tokens, datos, publicDir = PUBLIC, pro
   api.post('/reto', (_req, res) => res.status(501).json({ error: 'no_disponible', detalle: 'Reto de Claude: fuera de alcance v1 (requiere API key).' }));
   app.use('/api', api);
 
+  // El service worker se sirve con la versión del deploy inyectada: cambia en cada revisión y el navegador lo detecta.
+  const version = process.env.K_REVISION || process.env.MP_VERSION || `dev-${Date.now().toString(36)}`;
+  app.get('/sw.js', async (_req, res, next) => {
+    try { const fs = await import('node:fs/promises'); const src = await fs.readFile(path.join(publicDir, 'sw.js'), 'utf8'); res.setHeader('Content-Type', 'application/javascript; charset=utf-8'); res.setHeader('Cache-Control', 'no-cache'); res.setHeader('Service-Worker-Allowed', '/'); res.send(src.replace('__VERSION__', version)); } catch (e) { next(e); }
+  });
+  app.get('/version.json', (_req, res) => { res.setHeader('Cache-Control', 'no-cache'); res.json({ version }); });
   app.use(express.static(publicDir, {
     index: 'index.html', etag: true, maxAge: '5m',
     setHeaders(res, ruta) {
