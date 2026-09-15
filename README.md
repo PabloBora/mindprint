@@ -56,12 +56,16 @@ responde con error se avisa y, si fue 5xx, el toast ofrece «Reintentar». Si no
 pantalla (tarjeta punteada «por enviar»), se guarda en `localStorage` (`mp.cola`, una operación por documento, la
 última gana) y se envía en orden al volver la red (evento `online`, sondeo de 10 s o el botón «N por enviar» de la
 cabecera). Una operación que el servidor rechaza se descarta y manda el estado real. Al salir se vacía la cola.
+Cada petición tiene límite de tiempo (`TIEMPOS` en `api.js`: lectura 12 s, escritura 15 s) porque una red que tira
+paquetes no rechaza la conexión y el navegador tardaría ~2 min en fallar. Al vencer, un PUT o DELETE se encola (son
+idempotentes); un mensaje (POST) no, porque pudo haber llegado: se avisa, se recarga el estado y el texto vuelve a la
+caja. Borrar un mensaje que aún no salía retira su envío de la cola.
 
 **Service worker.** El servidor sirve `/sw.js` con la versión del deploy inyectada (`K_REVISION` en Cloud Run,
 `dev-<hora>` en local; `/version.json` la expone). Cada versión precachea el shell completo en su propia caché
 (`mindprint-<versión>`, con `cache: 'reload'` para saltar la caché HTTP) y lo sirve siempre desde ahí: nunca se
-mezclan archivos de dos deploys. `/api/estado` va a la red y, si falla, se devuelve la última copia con la
-cabecera `X-Mindprint-Offline: 1`; la app muestra el aviso «Sin conexión» y sigue funcionando en lectura y con la
+mezclan archivos de dos deploys. `/api/estado` va a la red y, si falla o no contesta en 8 s, se devuelve la última copia con la
+cabecera `X-Mindprint-Offline: 1` (la petición sigue en segundo plano y refresca la copia); la app muestra el aviso «Sin conexión» y sigue funcionando en lectura y con la
 cola. Cuando hay versión nueva, la app la instala aparte y ofrece «Actualizar» (cabecera y toast); al aceptar,
 el SW nuevo toma control y la página se recarga. `/salir` borra la copia del estado.
 

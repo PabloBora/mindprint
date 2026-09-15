@@ -39,7 +39,7 @@ test('sw.js: todo lo que precachea existe en public/ y todo módulo del cliente 
   for (const u of shell) assert.ok(fs.existsSync(path.join(PUBLIC, u)), `precachea ${u} y existe`);
   for (const f of todosJs()) { const rel = '/' + path.relative(PUBLIC, f).split(path.sep).join('/'); if (rel !== '/sw.js') assert.ok(shell.includes(rel), `${rel} está en el shell del service worker`); }
   for (const hoja of ['tokens', 'base', 'shell', 'componentes', 'modulos']) assert.ok(shell.includes(`/estilos/${hoja}.css`));
-  assert.match(sw, /const VERSION = '__VERSION__'/); assert.match(sw, /cache: 'reload'/, 'el shell se baja saltando la caché HTTP');
+  assert.match(sw, /const VERSION = '__VERSION__'/); assert.match(sw, /cache: 'reload'/, 'el shell se baja saltando la caché HTTP'); assert.match(sw, /Promise\.race\(\[red, tarde\]\)/, 'el estado no espera de más a una red que no contesta');
   assert.match(html, /class="sk"/, 'index.html trae el esqueleto de carga antes de que corra el JS');
 });
 

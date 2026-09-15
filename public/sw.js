@@ -39,14 +39,24 @@ async function delShell(clave, req) {
   if (hit) return hit;
   return fetch(req);
 }
+/* Red primero, pero sin esperar de más: si la red no contesta en ESPERA_ESTADO y hay copia, se entrega la copia
+   (marcada offline) y la petición sigue en segundo plano para refrescarla. Sin copia, se espera a la red. */
+const ESPERA_ESTADO = 8000;
 async function estadoRedPrimero(req) {
   const c = await caches.open(CACHE);
-  try { const r = await fetch(req); if (r.ok) c.put('/api/estado', r.clone()); return r; }
-  catch (err) {
-    const hit = await c.match('/api/estado'); if (!hit) throw err;
-    const h = new Headers(hit.headers); h.set('X-Mindprint-Offline', '1');
-    return new Response(hit.body, { status: 200, headers: h });
-  }
+  const copia = async () => { const hit = await c.match('/api/estado'); if (!hit) return null; const h = new Headers(hit.headers); h.set('X-Mindprint-Offline', '1'); return new Response(hit.body, { status: 200, headers: h }); };
+  const red = fetch(req).then((r) => { if (r.ok) c.put('/api/estado', r.clone()); return r; });
+  red.catch(() => {}); // si ya se entregó la copia, un fallo tardío no es un error sin atender
+  let timer;
+  const tarde = new Promise((res) => { timer = setTimeout(() => res(null), ESPERA_ESTADO); });
+  try {
+    const r = await Promise.race([red, tarde]);
+    if (r) return r;
+    const x = await copia(); if (x) return x;
+    return await red;
+  } catch (err) {
+    const x = await copia(); if (x) return x; throw err;
+  } finally { clearTimeout(timer); }
 }
 async function fuente(req) {
   const c = await caches.open(FUENTES);

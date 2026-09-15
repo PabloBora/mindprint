@@ -7,16 +7,25 @@ import { crearCola, esErrorDeRed } from './cola.js';
 let es = null;
 export const cola = crearCola({ storage: (() => { try { return globalThis.localStorage || null; } catch { return null; } })() });
 
+/** Límites de tiempo (ms). Una red que tira paquetes no rechaza la conexión: el navegador espera ~2 min antes de fallar.
+    Sin límite, la app se quedaría en «guardando…» ese tiempo en vez de encolar. Se ajustan en pruebas. */
+export const TIEMPOS = { lectura: 12000, escritura: 15000 };
+const errorDeRed = (causa, timeout) => { const err = new Error('Sin conexión'); err.code = 'red'; err.timeout = !!timeout; err.causa = causa; return err; };
+
 export async function api(metodo, ruta, cuerpo) {
-  let r;
-  try { r = await fetch(ruta, { method: metodo, credentials: 'same-origin', headers: cuerpo ? { 'content-type': 'application/json' } : {}, body: cuerpo ? JSON.stringify(cuerpo) : undefined }); }
-  catch (e) { const err = new Error('Sin conexión'); err.code = 'red'; err.causa = e; throw err; }
-  if (ruta === '/api/estado') S.fotoOffline = r.headers.get('x-mindprint-offline') === '1';
-  if (r.status === 401) { sinSesion(); const e = new Error('sin_sesion'); e.code = 'sin_sesion'; throw e; }
-  if (r.status === 304) return null;
-  let j = null; try { j = await r.json(); } catch { /* sin cuerpo */ }
-  if (!r.ok) { const e = new Error((j && j.detalle) || (j && j.error) || `HTTP ${r.status}`); e.code = (j && j.error) || 'error'; e.status = r.status; throw e; }
-  return j;
+  const ctl = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), metodo === 'GET' ? TIEMPOS.lectura : TIEMPOS.escritura) : null;
+  try {
+    let r;
+    try { r = await fetch(ruta, { method: metodo, credentials: 'same-origin', headers: cuerpo ? { 'content-type': 'application/json' } : {}, body: cuerpo ? JSON.stringify(cuerpo) : undefined, signal: ctl ? ctl.signal : undefined }); }
+    catch (e) { throw errorDeRed(e, ctl && ctl.signal.aborted); }
+    if (ruta === '/api/estado') S.fotoOffline = r.headers.get('x-mindprint-offline') === '1';
+    if (r.status === 401) { sinSesion(); const e = new Error('sin_sesion'); e.code = 'sin_sesion'; throw e; }
+    if (r.status === 304) return null;
+    let j = null; try { j = await r.json(); } catch (e) { if (ctl && ctl.signal.aborted) throw errorDeRed(e, true); /* sin cuerpo */ }
+    if (!r.ok) { const e = new Error((j && j.detalle) || (j && j.error) || `HTTP ${r.status}`); e.code = (j && j.error) || 'error'; e.status = r.status; throw e; }
+    return j;
+  } finally { if (timer) clearTimeout(timer); }
 }
 
 export function mensajeError(e) {
@@ -91,6 +100,9 @@ async function escribir(args) {
     alExito(j); S.ultimoGuardado = ahora(); bus.emit('estado'); return j && j.doc ? j.doc : true;
   } catch (e) {
     if (e.code === 'sin_sesion') return false;
+    // Un POST que venció el tiempo pudo haber llegado: reenviarlo desde la cola duplicaría el mensaje. No se encola;
+    // se recarga el estado (si llegó, aparece) y el texto vuelve a la caja para que la persona decida.
+    if (esErrorDeRed(e) && e.timeout && metodo === 'POST') { setConexion('bad'); bus.emit('error', 'No se confirmó si el mensaje salió. Revisa el chat antes de reenviarlo.'); await cargarEstado(); return false; }
     if (esErrorDeRed(e)) { local(); cola.agregar({ clave, metodo, ruta, cuerpo }); setConexion('bad'); bus.emit('cola'); bus.emit('estado'); bus.emit('error', mensajeError(e)); return true; }
     // el servidor respondió con error: se avisa y el estado real manda; si fue del servidor (5xx) se ofrece reintentar
     bus.emit('error', e.status >= 500 ? { msg: mensajeError(e), reintentar: () => escribir(args) } : mensajeError(e)); await cargarEstado(); return false;
