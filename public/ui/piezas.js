@@ -2,6 +2,17 @@
 import { S, P, yo, nombre, RESP, FASES, STAGES, ESTADOS, CRIT, REACC, ETAPAS_P, ideaById, comentariosDe, votosIdea, reaccCount, nSenales, enJuego, etiquetaEtapaP, refInfo } from '../estado.js';
 import { esc, icono, avatar, fmtDia, fmtFechaHora, relTiempo, diasHasta, ligaSegura } from './base.js';
 
+/* ---- comunes ---- */
+/** Botón «mover a…»: siempre visible en el teléfono (no hay arrastre) y al pasar el cursor o enfocar en escritorio. */
+export const btnMover = (kind, id) => `<button class="mover" type="button" data-act="mover" data-kind="${kind}" data-id="${esc(id)}" aria-label="Mover a otra columna" title="Mover a…">${icono('mover', 'sm')}</button>`;
+export const pillPendiente = (d) => (d._pendiente ? '<span class="pill warn" title="Guardado en este navegador; se envía al volver la red">por enviar</span>' : '');
+
+/* ---- esqueletos de carga (mismo markup que trae index.html) ---- */
+const sk = (w, h = 14) => `<div class="sk" style="width:${w};height:${h}px"></div>`;
+export const esqueletoLateral = () => `<div class="sk-bloque" aria-hidden="true">${sk('70%', 28)}<div class="sk-sep"></div>${sk('80%', 18)}${sk('65%', 18)}${sk('90%', 18)}${sk('75%', 18)}${sk('55%', 18)}${sk('70%', 18)}${sk('60%', 18)}</div>`;
+export const esqueletoCabecera = () => `<div class="sk-fila" aria-hidden="true">${sk('120px', 22)}${sk('min(320px,40%)', 34)}<span class="sk-espacio"></span>${sk('84px', 32)}${sk('34px', 34)}</div>`;
+export const esqueletoVista = () => `<div class="wrap sk-bloque" aria-hidden="true" aria-busy="true"><div class="sk-caja">${sk('45%', 24)}${sk('100%', 8)}${sk('60%', 14)}</div><div class="sk-grid"><div class="sk-caja">${sk('40%', 20)}${sk('100%', 36)}${sk('90%', 14)}${sk('75%', 14)}${sk('85%', 14)}</div><div class="sk-caja">${sk('50%', 20)}${sk('80%', 14)}${sk('70%', 14)}${sk('88%', 14)}</div></div></div>`;
+
 /* ---- tareas ---- */
 export function pillVence(t) {
   if (!t.vence) return '';
@@ -19,9 +30,9 @@ export function itemTarea(t) {
 }
 export function cardTarea(t) {
   const idea = t.ideaId ? ideaById(t.ideaId) : null; const nc = comentariosDe('tarea', t.id).length;
-  return `<div class="card tarea ${t.estado}" role="button" tabindex="0" draggable="true" data-kind="tarea" data-act="abrir" data-mod="tareas" data-id="${esc(t.id)}">${btnCheck(t)}`
+  return `<div class="card tarea ${t.estado}${t._pendiente ? ' por-enviar' : ''}" role="button" tabindex="0" draggable="true" data-kind="tarea" data-act="abrir" data-mod="tareas" data-id="${esc(t.id)}">${btnCheck(t)}${btnMover('tarea', t.id)}`
     + `<div class="t">${esc(t.titulo)}</div>${t.detalle ? `<div class="d">${esc(t.detalle)}</div>` : ''}${t.estado === 'bloqueada' && t.motivo ? `<div class="motivo">${esc(t.motivo)}</div>` : ''}`
-    + `<div class="meta">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${pillVence(t)}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<span class="tag" title="${esc(idea.titulo)}">oportunidad</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}</div></div>`;
+    + `<div class="meta">${avatar(t.responsable, 'sm')}<span>${esc(RESP[t.responsable] || '')}</span>${pillVence(t)}${t.fase !== 'general' ? `<span class="tag">${esc(FASES[t.fase] || t.fase)}</span>` : ''}${idea ? `<span class="tag" title="${esc(idea.titulo)}">oportunidad</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}${pillPendiente(t)}</div></div>`;
 }
 
 /* ---- usuarios de prueba ---- */
@@ -36,9 +47,9 @@ export function pillSiguiente(p) {
 export const pillSenales = (p) => { const n = nSenales(p); return n ? `<span class="pill ok">${n} señal${n === 1 ? '' : 'es'}</span>` : ''; };
 export function cardProspecto(p) {
   const caso = p.casoId ? ideaById(p.casoId) : null; const nc = comentariosDe('prospecto', p.id).length;
-  return `<div class="card prospecto" role="button" tabindex="0" draggable="true" data-kind="prospecto" data-act="abrir" data-mod="usuarios" data-id="${esc(p.id)}">`
+  return `<div class="card prospecto${p._pendiente ? ' por-enviar' : ''}" role="button" tabindex="0" draggable="true" data-kind="prospecto" data-act="abrir" data-mod="usuarios" data-id="${esc(p.id)}">${btnMover('prospecto', p.id)}`
     + `<div class="t">${esc(p.empresa)}</div>${(p.contacto || p.relacion || p.area) ? `<div class="d">${esc([p.contacto, p.relacion, p.area].filter(Boolean).join(' · '))}</div>` : ''}${p.siguientePaso ? `<div class="d"><span class="k">siguiente</span> ${esc(p.siguientePaso)}</div>` : ''}`
-    + `<div class="meta">${avatar(p.responsable, 'sm')}${pillSenales(p)}${pillSiguiente(p)}${caso ? `<span class="tag" title="${esc(caso.titulo)}">${esc(caso.titulo.slice(0, 28))}${caso.titulo.length > 28 ? '…' : ''}</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}</div></div>`;
+    + `<div class="meta">${avatar(p.responsable, 'sm')}${pillSenales(p)}${pillSiguiente(p)}${caso ? `<span class="tag" title="${esc(caso.titulo)}">${esc(caso.titulo.slice(0, 28))}${caso.titulo.length > 28 ? '…' : ''}</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}${pillPendiente(p)}</div></div>`;
 }
 export function itemProspecto(p) {
   return `<div class="item-t">${avatar(p.responsable, 'sm')}<div><button class="tit" type="button" data-act="abrir" data-mod="usuarios" data-id="${esc(p.id)}">${esc(p.empresa)}</button><div class="tags"><span class="pill soft">${esc(etiquetaEtapaP(p.etapa))}</span>${pillSenales(p)}${p.siguientePaso ? `<span>${esc(p.siguientePaso)}</span>` : ''}${pillSiguiente(p)}</div></div></div>`;
@@ -49,9 +60,9 @@ export function cardIdea(i) {
   const c = i.criterios || {}; const rc = reaccCount(i); const v = i.votos || {};
   const rx = REACC.filter((r) => rc[r[0]]).map((r) => `${rc[r[0]]} ${r[1].toLowerCase()}`).join(' · ');
   const voters = Object.keys(P()).filter((p) => v[p]); const nc = comentariosDe('idea', i.id).length;
-  return `<div class="card" role="button" tabindex="0" draggable="true" data-kind="idea" data-act="abrir" data-mod="oportunidades" data-id="${esc(i.id)}">
+  return `<div class="card${i._pendiente ? ' por-enviar' : ''}" role="button" tabindex="0" draggable="true" data-kind="idea" data-act="abrir" data-mod="oportunidades" data-id="${esc(i.id)}">${btnMover('idea', i.id)}
     <div class="t">${esc(i.titulo || '(sin título)')}</div>${i.dolor ? `<div class="d">${esc(i.dolor)}</div>` : ''}
-    <div class="meta">${i.autor ? avatar(i.autor, 'sm') : ''}<span class="crit" title="común · dolor · estándar · construible">${CRIT.map((k) => `<i class="l${c[k[0]] || 0}"></i>`).join('')}</span><span class="votos" title="votos">${icono('voto', 'sm')} ${votosIdea(i)}${voters.length ? ` <span class="avs">${voters.map((p) => avatar(p, 'sm')).join('')}</span>` : ''}</span>${rx ? `<span class="rx">${esc(rx)}</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}</div></div>`;
+    <div class="meta">${i.autor ? avatar(i.autor, 'sm') : ''}<span class="crit" title="común · dolor · estándar · construible">${CRIT.map((k) => `<i class="l${c[k[0]] || 0}"></i>`).join('')}</span><span class="votos" title="votos">${icono('voto', 'sm')} ${votosIdea(i)}${voters.length ? ` <span class="avs">${voters.map((p) => avatar(p, 'sm')).join('')}</span>` : ''}</span>${rx ? `<span class="rx">${esc(rx)}</span>` : ''}${nc ? `<span class="tag">${nc} coment.</span>` : ''}${pillPendiente(i)}</div></div>`;
 }
 
 /* ---- actividad ---- */
@@ -84,7 +95,7 @@ export function itemMsg(m, enHilo) {
   const mio = m.quien === yo();
   const ref = !enHilo && m.ref ? refInfo(m.ref.tipo, m.ref.id) : null;
   const chipRef = !enHilo && m.ref ? (ref ? `<button class="chip sm" type="button" data-act="abrir" data-mod="${ref.mod}" data-id="${esc(m.ref.id)}">${ref.etiqueta}: ${esc(m.ref.titulo)}</button>` : `<span class="tag">${esc(m.ref.titulo)} (ya no existe)</span>`) : '';
-  return `<div class="msg${mio ? ' mio' : ''}">${avatar(m.quien, 'sm')}<div class="cuerpo"><div class="hd"><b>${esc(nombre(m.quien) || '¿?')}</b><span class="when" title="${esc(fmtFechaHora(m.fecha))}">${esc(relTiempo(m.fecha))}</span>${chipRef}${mio ? `<button class="lnk" type="button" data-act="del-msg" data-id="${esc(m.id)}" aria-label="Borrar mensaje">borrar</button>` : ''}</div><div class="txt">${formatoMensaje(m.texto)}</div></div></div>`;
+  return `<div class="msg${mio ? ' mio' : ''}${m._pendiente ? ' por-enviar' : ''}${S.resaltado && S.resaltado === m.id ? ' resaltado' : ''}" data-msg="${esc(m.id)}">${avatar(m.quien, 'sm')}<div class="cuerpo"><div class="hd"><b>${esc(nombre(m.quien) || '¿?')}</b><span class="when" title="${esc(fmtFechaHora(m.fecha))}">${m._pendiente ? 'por enviar' : esc(relTiempo(m.fecha))}</span>${chipRef}${mio ? `<button class="lnk" type="button" data-act="del-msg" data-id="${esc(m.id)}" aria-label="Borrar mensaje">borrar</button>` : ''}</div><div class="txt">${formatoMensaje(m.texto)}</div></div></div>`;
 }
 export function seccionComentarios(tipo, id) {
   const hilo = comentariosDe(tipo, id);

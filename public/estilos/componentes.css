@@ -122,3 +122,27 @@ span.check{cursor:default}
 .guardado .ic{width:14px;height:14px;color:var(--ok)}
 .fila-etapas{display:block}
 .fila-etapas .seg{display:inline-flex}
+
+/* «mover a…» en tarjetas y cambios por enviar */
+.card{position:relative}
+.card .t{padding-right:26px}
+.card .mover{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--muted);opacity:0;background:var(--surface);transition:opacity .12s}
+.card:hover .mover,.card:focus-within .mover,.card .mover:focus-visible{opacity:1}
+.card .mover:hover{background:var(--surface-2);color:var(--ink)}
+.card.por-enviar{border-style:dashed;border-color:var(--warn)}
+.msg.por-enviar .txt{color:var(--muted)}
+.msg.resaltado{background:var(--accent-soft);border-radius:var(--r);padding-left:6px;padding-right:6px;animation:apagar 4s ease forwards}
+@keyframes apagar{0%,60%{background:var(--accent-soft)}100%{background:transparent}}
+@media (max-width:900px){.card .mover{opacity:1}}
+
+/* panel de ayuda */
+.panel-ayuda{display:grid;gap:18px}
+.panel-ayuda h3{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.lista-ayuda{display:grid;gap:8px}
+.lista-ayuda .fila{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:14px}
+.lista-ayuda .fila .ic{color:var(--muted);margin-top:1px}
+.lista-ayuda .fila b{display:block}
+.lista-ayuda .fila span{color:var(--ink-2);font-size:13px;line-height:1.4}
+.atajos{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;font-size:14px}
+.atajos kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;padding:2px 7px;background:var(--surface);white-space:nowrap;justify-self:start}
+.panel-ayuda .texto{display:grid;gap:8px;font-size:14px;color:var(--ink-2);line-height:1.5}
