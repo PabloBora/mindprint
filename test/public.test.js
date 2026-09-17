@@ -28,6 +28,7 @@ test('app.js parsea con node --check y solo habla con el mismo origen', () => {
   assert.doesNotMatch(js, /https?:\/\/(?!docs\.google\.com|drive\.google\.com)/, 'solo ligas al Doc y a Drive; el API es relativo');
   for (const ruta of ['/api/estado', '/api/eventos', '/api/ideas/', '/api/tareas/', '/api/iteracion', '/api/mensajes', '/api/prospectos/', '/entrar/', '/salir']) assert.ok(js.includes(ruta), `usa ${ruta}`);
   for (const tab of ['hoy', 'tareas', 'prospectos', 'ideas', 'chat', 'iter', 'actividad']) assert.ok(js.includes(`['${tab}', `), `pestaña ${tab}`);
+  for (const lbl of ["'Usuarios de prueba'", "'Oportunidades'", "'Detectar'", "'Explorar'", "'Probar'", "'jala', 'Jala'"]) assert.ok(js.includes(lbl), `etiqueta ${lbl}`);
   for (const fn of ['function viewHoy', 'function viewTareas', 'function viewChat', 'function seccionComentarios', 'function viewProspectos', 'function renderDlgProspecto', 'function renderDlgTarea', 'function viewIdeas', 'function viewIter', 'function viewActividad']) assert.ok(js.includes(fn), fn);
 });
 

@@ -185,18 +185,18 @@ test('prospectos: crear, mover por el embudo, comentar con referencia y borrar',
     const cp = await entrar(base, TOK_PABLO);
     let r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { empresa: '' }));
     assert.equal(r.status, 400); assert.equal((await r.json()).error, 'empresa_requerida');
-    r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { empresa: 'Maquinados del Bajío', contacto: 'Ing. Ruiz', area: 'Ventas', razon: 'Cotizan a mano', etapa: 'seleccion', responsable: 'daniel', siguientePaso: 'Llamar', fechaSiguiente: '2026-09-20' }));
-    assert.equal(r.status, 200); let j = await r.json(); assert.equal(j.doc.actualizadoPor, 'pablo'); assert.equal(j.doc.etapa, 'seleccion');
-    r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { ...j.doc, etapa: 'descubrimiento' }));
+    r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { empresa: 'Maquinados del Bajío', contacto: 'Ing. Ruiz', area: 'Ventas', razon: 'Cotizan a mano', etapa: 'candidato', responsable: 'daniel', siguientePaso: 'Llamar', fechaSiguiente: '2026-09-20', relacion: 'Cliente de Vitali' }));
+    assert.equal(r.status, 200); let j = await r.json(); assert.equal(j.doc.actualizadoPor, 'pablo'); assert.equal(j.doc.etapa, 'candidato'); assert.equal(j.doc.relacion, 'Cliente de Vitali');
+    r = await fetch(`${base}/api/prospectos/p1`, json('PUT', cp, { ...j.doc, etapa: 'probando', senales: { prueba: true, repite: true } }));
     assert.equal(r.status, 200);
     r = await fetch(`${base}/api/mensajes`, json('POST', cp, { texto: 'Ya nos dio acceso al inventario', ref: { tipo: 'prospecto', id: 'p1' } }));
     assert.equal(r.status, 201); j = await r.json(); assert.deepEqual(j.doc.ref, { tipo: 'prospecto', id: 'p1', titulo: 'Maquinados del Bajío' });
     const est = await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json();
-    assert.equal(est.prospectos.length, 1); assert.equal(est.prospectos[0].etapa, 'descubrimiento');
-    assert.ok(est.actividad.some((a) => a.objeto === 'prospecto' && a.accion === 'mueve' && a.detalle === 'descubrimiento' && a.titulo === 'Maquinados del Bajío'));
+    assert.equal(est.prospectos.length, 1); assert.equal(est.prospectos[0].etapa, 'probando'); assert.deepEqual(est.prospectos[0].senales, { prueba: true, repite: true, pide: false, recomienda: false, pagaria: false });
+    assert.ok(est.actividad.some((a) => a.objeto === 'prospecto' && a.accion === 'mueve' && a.detalle === 'probando' && a.titulo === 'Maquinados del Bajío'));
     assert.ok(est.actividad.some((a) => a.objeto === 'prospecto' && a.accion === 'crea'));
     assert.equal(est.iteracion.semanas, 6);
-    assert.deepEqual(Object.keys(est.iteracion.artefactos), ['caso', 'prospecto', 'mapa', 'caso_negocio', 'demo', 'doc_interna', 'propuesta', 'costos', 'decision']);
+    assert.deepEqual(Object.keys(est.iteracion.artefactos), ['oportunidad', 'proceso_tipo', 'solucion', 'prototipo', 'demo_doc', 'usuarios', 'senales', 'costos', 'decision']);
     r = await fetch(`${base}/api/iteracion`, json('PUT', cp, { ...est.iteracion, semanas: 4 }));
     assert.equal((await r.json()).doc.semanas, 4);
     r = await fetch(`${base}/api/prospectos/p1`, { method: 'DELETE', headers: { cookie: cp } });
@@ -205,4 +205,22 @@ test('prospectos: crear, mover por el embudo, comentar con referencia y borrar',
     r = await fetch(`${base}/api/mensajes`, json('POST', cp, { texto: 'x', ref: { tipo: 'prospecto', id: 'p1' } }));
     assert.equal(r.status, 400);
   } finally { await cerrar(); }
+});
+
+test('lo guardado con versiones anteriores llega migrado al cargar (etapas y criterios viejos)', async () => {
+  const datos = crearMemory();
+  await datos.guardar('prospectos', 'viejo', { id: 'viejo', empresa: 'Acme', etapa: 'descubrimiento', creado: '2026-09-11T10:00:00Z', actualizado: '2026-09-11T10:00:00Z', actualizadoPor: 'max' });
+  await datos.guardar('ideas', 'idea-vieja', { id: 'idea-vieja', titulo: 'Vieja', etapa: 'candidata', criterios: { acceso: 2, dolor: 1, agentizable: 2 }, creado: '2026-09-11T10:00:00Z' });
+  await datos.guardar('tareas', 'rota', { id: 'rota', titulo: '' });
+  const { app } = await crearApp({ secreto: SECRETO, tokens: `pablo:${TOK_PABLO}`, datos });
+  const server = await new Promise((r) => { const s = app.listen(0, () => r(s)); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  try {
+    const cp = await entrar(base, TOK_PABLO);
+    const est = await (await fetch(`${base}/api/estado`, { headers: { cookie: cp } })).json();
+    assert.equal(est.prospectos[0].etapa, 'contactado'); assert.equal(est.prospectos[0].actualizadoPor, 'max');
+    assert.deepEqual(est.prospectos[0].senales, { prueba: false, repite: false, pide: false, recomienda: false, pagaria: false });
+    assert.deepEqual(est.ideas[0].criterios, { comun: 0, dolor: 1, estandar: 0, construible: 2 });
+    assert.equal(est.tareas.length, 0, 'la tarea sin título se omite sin tumbar el arranque');
+  } finally { await new Promise((r) => server.close(r)); }
 });
