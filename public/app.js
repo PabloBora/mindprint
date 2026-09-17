@@ -3,7 +3,7 @@
    «mover a…», service worker. Los módulos viven en ./modulos/. */
 import { S, P, yo, nombre, tareas, esMia, noLeidos, lsSet, ideaById, tareaById, prospectoById, ESTADOS, ETAPAS_P, STAGES } from './estado.js';
 import { actual, ir, reemplazar, escuchar, rutaDe } from './ruta.js';
-import { esc, icono, avatar, toast, bus, captureFocus, restoreFocus, abrirPanel, cerrarPanel, panelAbierto, atraparFoco, recordarFoco, hoy } from './ui/base.js';
+import { esc, esTactil, icono, avatar, toast, bus, captureFocus, restoreFocus, abrirPanel, cerrarPanel, panelAbierto, atraparFoco, recordarFoco, hoy } from './ui/base.js';
 import { esqueletoLateral, esqueletoCabecera, esqueletoVista } from './ui/piezas.js';
 import { panelAyuda } from './ui/ayuda.js';
 import { buscarGlobal, GRUPOS } from './buscar.js';
@@ -136,7 +136,7 @@ function cerrarAyuda() { S.ayuda = false; cerrarPanel(); render(); }
 
 /* ---------- eventos ---------- */
 // En pantallas táctiles Enter es salto de línea (como en las apps de chat) y se envía con el botón.
-const tactil = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+const tactil = esTactil;
 // «Cancelar» no debe quitarle el foco a la caja antes del clic: si la cabecera se re-acomoda, el toque se pierde.
 document.addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('[data-act="cerrar-busqueda"]')) e.preventDefault(); });
 let tGuardado = null;
@@ -231,7 +231,7 @@ document.addEventListener('drop', async (e) => {
 });
 
 /* ---------- ruteo y arranque ---------- */
-function alCambiarRuta(r) { const previo = MODULOS.get(S.ruta.mod); if (previo && previo.alSalir && previo.id !== r.mod) previo.alSalir(); S.ruta = r; S.menuAbierto = null; S.mover = null; S.busqAbierta = false; S.busqIdx = -1; if (S.ayuda) { S.ayuda = false; cerrarPanel(); } if (!MODULOS.has(r.mod)) { reemplazar(rutaDe('hoy')); return; } render(); }
+function alCambiarRuta(r) { const previo = MODULOS.get(S.ruta.mod); if (previo && previo.alSalir && previo.id !== r.mod) previo.alSalir(); if (S.ruta.mod !== r.mod) S.q = ''; S.ruta = r; S.menuAbierto = null; S.mover = null; S.busqAbierta = false; S.busqIdx = -1; if (S.ayuda) { S.ayuda = false; cerrarPanel(); } if (!MODULOS.has(r.mod)) { reemplazar(rutaDe('hoy')); return; } render(); }
 escuchar(alCambiarRuta);
 S.ruta = actual(); S.q = '';
 if (!MODULOS.has(S.ruta.mod)) reemplazar(rutaDe('hoy'));

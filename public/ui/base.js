@@ -3,6 +3,8 @@ import { P, RESP, nombre } from '../estado.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const uid = () => (globalThis.crypto && globalThis.crypto.randomUUID ? globalThis.crypto.randomUUID().replace(/-/g, '').slice(0, 20) : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+/** Pantalla táctil (dedo como puntero principal): ahí Enter hace salto de línea y se envía con el botón. */
+export const esTactil = () => !!(globalThis.matchMedia && globalThis.matchMedia('(pointer: coarse)').matches);
 export const ligaSegura = (u) => typeof u === 'string' && /^https?:\/\/[^\s]+$/i.test(u.trim());
 
 /* ---------- fechas ---------- */

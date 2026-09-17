@@ -54,7 +54,7 @@ function panel(id) {
       <div class="field"><label>Oportunidad relacionada</label><select class="in" ${B('ideaId')}>${opcionesIdea(t.ideaId)}</select></div>
     </div></div>
     ${seccionComentarios('tarea', t.id)}`;
-  return { titulo: 'Tarea', html, pie: pieEdicion(t, 'del-tarea', t.id) };
+  return { titulo: `Tarea<span class="sr-only">: ${esc(t.titulo)}</span>`, html, pie: pieEdicion(t, 'del-tarea', t.id) };
 }
 
 export default {

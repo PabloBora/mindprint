@@ -161,7 +161,7 @@ span.check{cursor:default}
   .toolbar>.chips{flex:0 0 calc(100% + 28px);max-width:none}
   .toolbar>.chips::-webkit-scrollbar,.stagebar::-webkit-scrollbar{display:none}
   .toolbar>.hint{display:none}
-  .toolbar>select.in{flex:1 1 140px;width:auto!important;min-height:44px}
+  .toolbar>select.in{flex:1 1 140px;min-height:44px}
   .toolbar>.btn{flex:0 0 auto}
   .sub{gap:4px 14px;font-size:13px}
   /* check de tarea y botón de mover con área táctil grande sin cambiar cómo se ven */

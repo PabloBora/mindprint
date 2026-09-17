@@ -9,6 +9,7 @@ button{cursor:pointer;background:none;border:0;padding:0}
 a{color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 [hidden]{display:none!important}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 .salto{position:absolute;left:-999px;top:8px;background:var(--ink);color:var(--paper);padding:6px 10px;border-radius:var(--r-sm);z-index:100}
 .salto:focus{left:8px}
@@ -28,7 +29,7 @@ textarea.in{resize:vertical;min-height:38px;line-height:1.4}
 select.in{padding-right:26px}
 .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:var(--r-sm);padding:8px 14px;font-weight:500;line-height:1.2;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{border-color:var(--ink-2)}
-a.btn,a.btn-nuevo{text-decoration:none}
+a.btn{text-decoration:none}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.primary:hover{filter:brightness(1.06)}
 .btn.peligro{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -85,7 +86,7 @@ a.btn,a.btn-nuevo{text-decoration:none}
 /* contenido solo para escritorio o solo para teléfono */
 .solo-movil{display:none}
 @media (max-width:900px){
-  .solo-escritorio{display:none!important}
+  .solo-escritorio{display:none}
   .solo-movil{display:inline}
   /* áreas táctiles: nada que se toque por debajo de ~40 px */
   .chip{min-height:40px;padding:6px 14px}

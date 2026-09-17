@@ -51,7 +51,7 @@ function panel(id) {
     </div>
     <div class="field"><label>Notas</label><textarea class="in" rows="2" ${B('notas')} placeholder="Objeciones, preguntas, lo que dijeron">${esc(p.notas)}</textarea></div>
     ${seccionComentarios('prospecto', p.id)}`;
-  return { titulo: 'Usuario de prueba', html, pie: pieEdicion(p, 'del-prospecto', p.id) };
+  return { titulo: `Usuario de prueba<span class="sr-only">: ${esc(p.empresa)}</span>`, html, pie: pieEdicion(p, 'del-prospecto', p.id) };
 }
 
 export default {

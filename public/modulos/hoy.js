@@ -17,7 +17,7 @@ function vista() {
     + (dDemo == null ? '' : `<span>${dDemo < 0 ? `prueba hace <b>${-dDemo} d</b>` : dDemo === 0 ? 'prueba <b>hoy</b>' : `prueba en <b>${dDemo} d</b> (${fmtDia(it.demo)})`}</span>`)
     + (it.sincronia ? `<span>sincronía <b>${esc(it.sincronia)}</b></span>` : '') + (it.canal ? `<span>canal <b>${esc(it.canal)}</b></span>` : '')
     + '</div></div>'
-    + (faltan.length ? `<a class="completar" href="${rutaDe('iteracion')}">Falta ${faltan.join(', ')} · completar</a>` : '')
+    + (faltan.length ? `<a class="completar" href="${rutaDe('iteracion')}">Falta${faltan.length > 1 ? 'n' : ''} ${faltan.join(', ')} · completar</a>` : '')
     + `<div class="bar"><i style="width:${pct}%"></i></div>`
     + `<div class="mini-steps">${PHASES.map((p, i) => `<a href="${rutaDe('iteracion')}" class="${i < idx ? 'done' : ''}${i === idx ? 'now' : ''}" title="Ir a Iteración">${p[1]}</a>`).join('')}</div></section>`;
   h += '<div class="grid-hoy">';
