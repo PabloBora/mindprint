@@ -21,19 +21,29 @@ npm run check        # sintaxis de todo el JS
 
 ## Interfaz
 
-`public/` es HTML + CSS + JS sin build ni dependencias (`index.html`, `estilos.css`, `app.js`). El CSP del
-servidor solo permite `script-src 'self'`, así que no hay scripts inline. La interfaz carga `/api/estado`,
-se conecta a `/api/eventos` (SSE) y, si eso falla, sondea cada 10 s. Sin sesión muestra la pantalla de
-entrada (pegar la liga personal).
+`public/` es una app sin build ni dependencias: módulos ES (`type="module"`, CSP `script-src 'self'`, sin scripts
+inline), rutas por hash y un shell de app (barra lateral en escritorio, barra inferior en móvil, cabecera con
+búsqueda, "+ Nuevo", avisos y menú de persona, panel lateral para editar). Instalable como PWA (manifest e iconos).
 
-Pestañas: **Hoy** (centro de trabajo: iteración compacta, lo mío con alta rápida, usuarios de prueba en
-juego, el equipo, pendientes de la fase, últimos movimientos) · **Tareas** (tablero por estado con arrastre
-y diálogo) · **Usuarios de prueba** (colección `prospectos`: gente cercana con la que se valida; etapas
-candidato → contactado → probando → jala o descartado; diálogo con cómo lo conocemos, qué probó y las
-cinco señales de que se vende sola) · **Oportunidades** (colección `ideas`: tablero por etapa Detectada →
-Explorada → Candidata → Elegida, con votos y los cuatro criterios del Plan) · **Chat** · **Iteración**
-(fases Detectar, Explorar, Construir, Probar, Decidir; los nueve entregables del Plan v0.3) · **Actividad**.
-Los diálogos llevan al pie su hilo de comentarios.
+```
+public/
+  index.html            shell; carga /app.js como módulo
+  app.js                arranque: registro de módulos, ruteo, shell, panel, eventos, atajos, arrastre
+  api.js                red: /api/*, SSE con sondeo de respaldo, escrituras con upsert local
+  estado.js             estado del cliente, constantes del método (Plan v0.3), helpers de datos
+  ruta.js               rutas #/<modulo>[/<id>] (puras, se prueban en Node)
+  ui/base.js            escape, fechas, iconos SVG, avatar, toast (con Deshacer), confirmar, panel, foco
+  ui/piezas.js          tarjetas, renglones, señales, comentarios, actividad, mensajes
+  modulos/<nombre>.js   un módulo = un archivo: { id, titulo, icono, orden, principal, nuevo, badge, hot,
+                        vista(), panel(id), acciones{}, binds{}, submits{}, filtros(), alMostrar(), alSalir() }
+  estilos/{tokens,base,shell,componentes,modulos}.css
+  manifest.webmanifest, iconos/
+```
+
+Agregar un módulo = un archivo en `modulos/` registrado en `app.js`. Atajos: `/` buscar, `n` nuevo en el módulo,
+`g` + `h/t/u/o/c/i/a` ir a un módulo, `Escape` cierra menú o panel. Pestañas: **Hoy**, **Tareas**, **Usuarios de
+prueba**, **Oportunidades**, **Chat**, **Iteración**, **Actividad**. Cada elemento se abre en el panel lateral con
+su ruta (`#/tareas/<id>`), así una liga abre directo la tarea.
 
 ## Configuración
 
