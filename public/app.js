@@ -61,8 +61,9 @@ function renderShell() {
   const vencidas = tareas().filter((t) => esMia(t) && t.estado !== 'hecha' && t.vence && t.vence < hoy()).length;
   const avisos = noLeidos() + vencidas;
   const cab = $('cabecera'); const keep = captureFocus(cab);
-  cab.innerHTML = `<div class="titulo-mod">${icono(mod.icono)}<span>${esc(mod.titulo)}</span></div>`
-    + `<div class="buscar">${icono('buscar')}<input class="in" id="q" data-keep="q" type="search" placeholder="Buscar en todo" value="${esc(S.q || '')}" aria-label="Buscar en todo" autocomplete="off" role="combobox" aria-expanded="${S.busqAbierta && !!buscarGlobal(S.q)}" aria-controls="busq-res" aria-autocomplete="list"><kbd>/</kbd>${renderBusqueda()}</div>`
+  cab.classList.toggle('buscando', !!(S.q || '').trim());
+  cab.innerHTML = `<div class="titulo-mod">${icono(mod.icono)}<span class="largo">${esc(mod.titulo)}</span><span class="corto">${esc(mod.corto || mod.titulo)}</span></div>`
+    + `<div class="buscar">${icono('buscar')}<input class="in" id="q" data-keep="q" type="search" placeholder="Buscar en todo" value="${esc(S.q || '')}" aria-label="Buscar en todo" autocomplete="off" role="combobox" aria-expanded="${S.busqAbierta && !!buscarGlobal(S.q)}" aria-controls="busq-res" aria-autocomplete="list"><kbd>/</kbd>${renderBusqueda()}</div><button type="button" class="buscar-cancelar" data-act="cerrar-busqueda">Cancelar</button>`
     + `<div class="derecha">${indicadorGuardado()}${S.versionNueva ? `<button type="button" class="version-nueva" data-act="actualizar" title="Hay una versión nueva del tablero">${icono('reloj', 'sm')}<span>Actualizar</span></button>` : ''}<button type="button" class="btn-nuevo" data-act="menu" data-menu="nuevo" aria-haspopup="menu" aria-expanded="${S.menuAbierto === 'nuevo'}">${icono('mas')}<span>Nuevo</span></button>`
     + `<button type="button" class="cab-icono" data-act="menu" data-menu="avisos" aria-label="Avisos" aria-haspopup="menu" aria-expanded="${S.menuAbierto === 'avisos'}">${icono('campana')}${avisos ? `<span class="badge">${avisos}</span>` : ''}</button>`
     + `<button type="button" class="cab-persona" data-act="menu" data-menu="persona" aria-haspopup="menu" aria-expanded="${S.menuAbierto === 'persona'}">${avatar(me)}<span><span class="nom">${esc(nombre(me))}</span><br><span class="rol">${esc((P()[me] || {}).rol || '')}</span></span></button></div>`
@@ -134,6 +135,10 @@ async function moverA(kind, id, destino, etiqueta) {
 function cerrarAyuda() { S.ayuda = false; cerrarPanel(); render(); }
 
 /* ---------- eventos ---------- */
+// En pantallas táctiles Enter es salto de línea (como en las apps de chat) y se envía con el botón.
+const tactil = () => !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+// «Cancelar» no debe quitarle el foco a la caja antes del clic: si la cabecera se re-acomoda, el toque se pierde.
+document.addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('[data-act="cerrar-busqueda"]')) e.preventDefault(); });
 let tGuardado = null;
 bus.on('estado', render); bus.on('presencia', renderShell); bus.on('conexion', renderShell); bus.on('cola', renderShell);
 bus.on('guardando', () => { renderShell(); clearTimeout(tGuardado); if (!S.guardando) tGuardado = setTimeout(renderShell, 2600); });
@@ -152,6 +157,7 @@ document.addEventListener('click', async (e) => {
   if (act === 'cerrar-panel') { if (S.ayuda) { cerrarAyuda(); return; } reemplazar(rutaDe(S.ruta.mod)); return; }
   if (act === 'abrir') { recordarFoco(`[data-act="abrir"][data-mod="${el.dataset.mod}"][data-id="${el.dataset.id}"]`); ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
   if (act === 'abrir-res') { S.busqAbierta = false; S.busqIdx = -1; S.q = ''; ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
+  if (act === 'cerrar-busqueda') { S.q = ''; S.busqAbierta = false; S.busqIdx = -1; const q = $('q'); if (q) q.blur(); render(); return; }
   if (act === 'ayuda') { recordarFoco(el.closest('#lateral') ? '#lateral [data-act="ayuda"]' : S.menuAbierto === 'mas' ? '[data-menu="mas"]' : '[data-menu="persona"]'); S.menuAbierto = null; S.ayuda = true; render(); return; }
   if (act === 'salir') { cola.limpiar(); return; } // el enlace sigue a /salir; lo pendiente de otra sesión no debe quedarse en este navegador
   if (act === 'actualizar') { if (S.versionNueva) S.versionNueva(); return; }
@@ -203,7 +209,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (S.busqAbierta) { S.busqAbierta = false; S.busqIdx = -1; renderShell(); const q = $('q'); if (q) q.focus(); return; } if (S.menuAbierto) { S.menuAbierto = null; S.mover = null; renderShell(); return; } if (S.ayuda) { cerrarAyuda(); return; } if (panelAbierto()) { reemplazar(rutaDe(S.ruta.mod)); return; } }
   const enCampo = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable);
   if (e.key === 'Enter' && e.target.closest && e.target.closest('.card[data-act]') && !e.target.closest('button')) { e.preventDefault(); e.target.closest('.card').click(); return; }
-  if (e.key === 'Enter' && !e.shiftKey && e.target.tagName === 'TEXTAREA' && e.target.closest && e.target.closest('form[data-submit="add-msg"]')) { e.preventDefault(); const f = e.target.closest('form'); if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); return; }
+  if (e.key === 'Enter' && !e.shiftKey && !tactil() && e.target.tagName === 'TEXTAREA' && e.target.closest && e.target.closest('form[data-submit="add-msg"]')) { e.preventDefault(); const f = e.target.closest('form'); if (f.requestSubmit) f.requestSubmit(); else f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); return; }
   if (enCampo || e.ctrlKey || e.metaKey || e.altKey || !S.estado) return;
   if (e.key === '/') { e.preventDefault(); const q = $('q'); if (q) { q.focus(); q.select(); } return; }
   if (e.key === '?') { e.preventDefault(); if (S.ayuda) cerrarAyuda(); else { S.ayuda = true; render(); } return; }

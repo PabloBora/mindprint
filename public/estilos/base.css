@@ -28,6 +28,7 @@ textarea.in{resize:vertical;min-height:38px;line-height:1.4}
 select.in{padding-right:26px}
 .btn{border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:var(--r-sm);padding:8px 14px;font-weight:500;line-height:1.2;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
 .btn:hover{border-color:var(--ink-2)}
+a.btn,a.btn-nuevo{text-decoration:none}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.primary:hover{filter:brightness(1.06)}
 .btn.peligro{background:var(--bad);border-color:var(--bad);color:#fff}
@@ -80,3 +81,17 @@ select.in{padding-right:26px}
 .confirmar h2{font-family:var(--display);font-size:20px;font-weight:600}
 .confirmar p{color:var(--ink-2);font-size:14px}
 .confirmar .acciones{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+
+/* contenido solo para escritorio o solo para teléfono */
+.solo-movil{display:none}
+@media (max-width:900px){
+  .solo-escritorio{display:none!important}
+  .solo-movil{display:inline}
+  /* áreas táctiles: nada que se toque por debajo de ~40 px */
+  .chip{min-height:40px;padding:6px 14px}
+  .chip.sm{min-height:32px;padding:4px 10px;font-size:12px}
+  .btn{min-height:44px}
+  .btn.sm{min-height:40px;padding:6px 12px}
+  .btn.icono{min-width:44px;justify-content:center}
+  .seg button{min-height:40px;padding:6px 12px}
+}

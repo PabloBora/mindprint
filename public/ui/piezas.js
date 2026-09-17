@@ -101,7 +101,7 @@ export function seccionComentarios(tipo, id) {
   const hilo = comentariosDe(tipo, id);
   return `<div class="comentarios"><span class="k">Comentarios${hilo.length ? ` (${hilo.length})` : ''}</span>`
     + `<div class="hilo">${hilo.length ? hilo.map((m) => itemMsg(m, true)).join('') : '<span class="hint">Sin comentarios. Lo que escribas aquí también sale en el Chat con la referencia.</span>'}</div>`
-    + `<form class="composer" data-submit="add-msg" data-ref-tipo="${tipo}" data-ref-id="${esc(id)}"><textarea class="in" data-keep="coment-${esc(id)}" rows="2" placeholder="Comentar (Enter envía)" maxlength="1000"></textarea><button class="btn sm primary" type="submit">${icono('enviar', 'sm')}Comentar</button></form></div>`;
+    + `<form class="composer" data-submit="add-msg" data-ref-tipo="${tipo}" data-ref-id="${esc(id)}"><textarea class="in" data-keep="coment-${esc(id)}" rows="2" placeholder="Escribe un comentario" maxlength="1000"></textarea><button class="btn sm primary" type="submit">${icono('enviar', 'sm')}Comentar</button></form></div>`;
 }
 export const ligaAbrir = (u) => (ligaSegura(u) ? `<a href="${esc(u)}" target="_blank" rel="noopener">abrir ${icono('externo', 'sm')}</a>` : '');
 export function pieEdicion(doc, actBorrar, id) {
