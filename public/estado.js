@@ -47,8 +47,8 @@ export const S = {
     usuarios: { resp: 'todas', col: 'candidato' },
   },
   arrastrando: null, arrastrandoKind: 'idea',
-  guardando: 0, ultimoGuardado: '',
-  menuAbierto: null,
+  guardando: 0, ultimoGuardado: '', fotoOffline: false, version: '', versionNueva: null,
+  menuAbierto: null, mover: null, ayuda: false, busqAbierta: false, busqIdx: -1, resaltado: '',
 };
 
 export const P = () => (S.estado && S.estado.personas) || PERSONAS_LOCAL;

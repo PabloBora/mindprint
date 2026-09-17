@@ -54,3 +54,26 @@ test('paneles: edición y alta renderizan; un id inexistente devuelve null; las 
   const chat = (await import('../public/modulos/chat.js')).default.vista();
   assert.ok(chat.includes('class="mention me"'), 'la mención a mí se resalta'); assert.ok(chat.includes('href="https://example.com/x"'));
 });
+
+test('panel de ayuda y esqueletos: renderizan sin datos, con atajos, pestañas y sin HTML inseguro', async () => {
+  const { panelAyuda } = await import('../public/ui/ayuda.js');
+  const a = panelAyuda('rev-<7>'); assert.equal(a.titulo, 'Ayuda y atajos'); assert.ok(a.html.includes('class="panel-ayuda"'));
+  for (const k of ['/', 'n', 'g h', 'Esc', '?']) assert.ok(a.html.includes(`<kbd>${k}</kbd>`), `atajo ${k}`);
+  for (const m of ['Hoy', 'Tareas', 'Usuarios de prueba', 'Oportunidades', 'Chat', 'Iteración', 'Actividad']) assert.ok(a.html.includes(`<b>${m}</b>`), `pestaña ${m}`);
+  assert.ok(a.html.includes('class="tag">versión rev-&lt;7&gt;<'), 'la versión se escapa'); assert.ok(!panelAyuda('').html.includes('class="tag">versión'), 'sin versión no se pinta la línea');
+  assert.match(a.html, /drive\.google\.com/);
+  const { esqueletoLateral, esqueletoCabecera, esqueletoVista } = await import('../public/ui/piezas.js');
+  for (const fn of [esqueletoLateral, esqueletoCabecera, esqueletoVista]) { const h = fn(); assert.ok((h.match(/class="sk"/g) || []).length >= 4); assert.ok(h.includes('aria-hidden="true"')); }
+});
+
+test('tarjetas y mensajes marcan lo pendiente de enviar y traen el botón de mover', async () => {
+  S.estado = fixture(); S.yo = S.estado.yo; S.resaltado = 'm1';
+  const { cardTarea, cardProspecto, cardIdea, itemMsg } = await import('../public/ui/piezas.js');
+  const t = cardTarea({ ...S.estado.tareas[0], _pendiente: true }); assert.ok(t.includes('class="card tarea en_curso por-enviar"')); assert.ok(t.includes('por enviar')); assert.ok(t.includes('data-act="mover" data-kind="tarea" data-id="t1"'));
+  assert.ok(!cardTarea(S.estado.tareas[0]).includes('por enviar'));
+  assert.ok(cardProspecto(S.estado.prospectos[0]).includes('data-act="mover" data-kind="prospecto"'));
+  assert.ok(cardIdea(S.estado.ideas[0]).includes('data-act="mover" data-kind="idea"'));
+  const m1 = itemMsg(S.estado.mensajes[0], false); assert.ok(m1.includes('data-msg="m1"')); assert.ok(m1.includes(' resaltado"'));
+  const mp = itemMsg({ ...S.estado.mensajes[1], _pendiente: true }, false); assert.ok(mp.includes(' por-enviar"')); assert.ok(mp.includes('por enviar'));
+  S.resaltado = '';
+});

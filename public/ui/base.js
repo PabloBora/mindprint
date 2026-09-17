@@ -58,6 +58,7 @@ export const ICONOS = {
   externo: P24('<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/>'),
   mover: P24('<path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/>'),
   reloj: P24('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  ayuda: P24('<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .8-1 1.5v.2"/><path d="M12 17h.01"/>'),
 };
 export const icono = (n, cls = '') => (ICONOS[n] || '').replace('class="ic"', `class="ic ${cls}"`);
 
