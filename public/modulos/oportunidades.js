@@ -1,7 +1,7 @@
 /* Oportunidades: tablero por etapa, votos, criterios y reacciones. */
-import { S, P, yo, ideas, ideaById, votosUsados, votosIdea, reaccCount, sortIdeas, STAGES, CRIT, REACC, VOTOS_MAX } from '../estado.js';
+import { S, P, yo, ideas, ideaById, votosUsados, votosIdea, reaccCount, STAGES, CRIT, REACC, VOTOS_MAX, ORDENES, ordenar, guardarFiltros } from '../estado.js';
 import { esc, icono, avatar, uid, toast, confirmar } from '../ui/base.js';
-import { cardIdea, seccionComentarios, pieEdicion } from '../ui/piezas.js';
+import { cardIdea, seccionComentarios, pieEdicion, colTablero, columnasGrid, selectOrden } from '../ui/piezas.js';
 import { guardarIdea, borrarIdea } from '../api.js';
 import { rutaDe, reemplazar } from '../ruta.js';
 
@@ -11,14 +11,14 @@ const coincide = (i) => { const q = (S.q || '').trim().toLowerCase(); return !q 
 function vista() {
   const todas = ideas(); const visibles = todas.filter((i) => (f().autor === 'todos' || i.autor === f().autor) && coincide(i));
   const cand = todas.filter((i) => i.etapa === 'candidata').length; const eleg = todas.filter((i) => i.etapa === 'elegida').length; const quedan = Math.max(0, VOTOS_MAX - votosUsados(yo()));
-  let h = `<div class="sub"><span><b>${todas.length}</b> oportunidades</span><span><b>${cand}</b> candidata${cand === 1 ? '' : 's'}</span><span><b>${eleg}</b> elegida${eleg === 1 ? '' : 's'}</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span class="solo-escritorio">Se ordenan por votos y luego por criterios.</span></div>`;
-  h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${f().autor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${f().autor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><a class="btn primary sm" href="${rutaDe('oportunidades', 'nuevo')}">${icono('mas', 'sm')}Nueva oportunidad</a></div>`;
+  let h = `<div class="sub"><span><b>${todas.length}</b> oportunidades</span><span><b>${cand}</b> candidata${cand === 1 ? '' : 's'}</span><span><b>${eleg}</b> elegida${eleg === 1 ? '' : 's'}</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span></div>`;
+  h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${f().autor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${f().autor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div>${selectOrden('oportunidades', f().orden, ORDENES.oportunidades)}<a class="btn primary sm" href="${rutaDe('oportunidades', 'nuevo')}">${icono('mas', 'sm')}Nueva oportunidad</a></div>`;
   if (!todas.length) h += '<div class="vacio"><b>Todavía no hay oportunidades.</b> Escribe la primera: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente, y califica los cuatro criterios. Cada quien tiene 3 votos.</div>';
   h += `<div class="stagebar chips">${STAGES.map((s) => `<button class="chip" data-act="stage" data-s="${s[0]}" aria-pressed="${f().stage === s[0]}">${s[1]} <span class="tag">${visibles.filter((i) => i.etapa === s[0]).length}</span></button>`).join('')}</div>`;
-  h += '<div class="board">';
+  h += `<div class="board" style="grid-template-columns:${columnasGrid(STAGES.map((e) => e[0]), f().colapsadas)}">`;
   for (const [k, label] of STAGES) {
-    const items = visibles.filter((i) => i.etapa === k).sort(sortIdeas);
-    h += `<section class="col${f().stage === k ? ' active' : ''}${items.length ? '' : ' empty'}" data-col="${k}" data-kind="idea"><h3><span class="${k === 'elegida' ? 'hl' : ''}">${label}</span><span class="n">${items.length}</span></h3><div class="cards">${items.map(cardIdea).join('')}</div></section>`;
+    const items = ordenar('oportunidades', visibles.filter((i) => i.etapa === k), f().orden);
+    h += colTablero({ tablero: 'oportunidades', kind: 'idea', k, label, total: items.length, cards: items.map(cardIdea).join(''), activa: f().stage === k, plegada: f().colapsadas.includes(k), hl: k === 'elegida' });
   }
   h += '</div>';
   return h;
@@ -59,9 +59,10 @@ export default {
   id: 'oportunidades', titulo: 'Oportunidades', corto: 'Oportunidades', icono: 'oportunidades', orden: 4, principal: false, nuevo: true,
   badge: () => (ideas().length ? String(ideas().length) : ''),
   vista, panel,
+  filtros: (k, v) => { if (k === 'orden') { f().orden = v; guardarFiltros(); } },
   acciones: {
-    'fautor': (el) => { f().autor = el.dataset.v; S.render(); },
-    'stage': (el) => { f().stage = el.dataset.s; S.render(); },
+    'fautor': (el) => { f().autor = el.dataset.v; guardarFiltros(); S.render(); },
+    'stage': (el) => { f().stage = el.dataset.s; guardarFiltros(); S.render(); },
     'etapa': async (el) => { const i = ideaById(el.dataset.id); if (i && i.etapa !== el.dataset.s) await guardarIdea({ ...i, etapa: el.dataset.s }); },
     'voto': async (el) => { const i = ideaById(el.dataset.id); if (!i) return; const d = parseInt(el.dataset.d, 10); const me = yo(); const v = { ...(i.votos || {}) }; const cur = v[me] || 0; if (d > 0 && votosUsados(me) >= VOTOS_MAX) { toast(`Ya usaste tus ${VOTOS_MAX} votos`); return; } v[me] = Math.max(0, cur + d); await guardarIdea({ ...i, votos: v }); },
     'crit': async (el) => { const i = ideaById(el.dataset.id); if (!i) return; await guardarIdea({ ...i, criterios: { ...(i.criterios || {}), [el.dataset.k]: parseInt(el.dataset.v, 10) } }); },

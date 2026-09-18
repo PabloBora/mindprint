@@ -3,17 +3,18 @@ import { esc, icono } from './base.js';
 
 const PESTANAS = [
   ['hoy', 'Hoy', 'Tu centro de trabajo: la iteración, lo tuyo, el equipo y lo pendiente de la fase.'],
-  ['tareas', 'Tareas', 'Tablero por estado. Arrastra entre columnas o usa el botón de mover; cada tarea tiene responsable, fase y fecha.'],
+  ['tareas', 'Tareas', 'Tablero por estado. Arrastra entre columnas o usa el botón de mover; toca el nombre de una columna para plegarla. Filtros y orden se recuerdan.'],
   ['usuarios', 'Usuarios de prueba', 'Gente cercana con la que validamos. Etapas de candidato a «jala» y las cinco señales de tracción.'],
   ['oportunidades', 'Oportunidades', 'Procesos que valdría automatizar. Cuatro criterios, tres votos por persona y reacciones.'],
   ['chat', 'Chat', 'Conversación de los tres. Los comentarios en una tarjeta también salen aquí, con su referencia.'],
   ['iteracion', 'Iteración', 'Fase, fechas, entregables de cada fase y las decisiones de cierre.'],
-  ['actividad', 'Actividad', 'Todo lo que hicieron los tres, en orden.'],
+  ['actividad', 'Actividad', 'Todo lo que hicieron los tres, en orden; se filtra por persona y por tipo.'],
+  ['ajustes', 'Ajustes', 'Tema, tamaño de letra, sonido de mensajes, semanas de la iteración y datos de la app.'],
 ];
 const ATAJOS = [
   ['/', 'Buscar en todo (tareas, usuarios, oportunidades y mensajes)'],
   ['n', 'Nuevo en la pestaña actual'],
-  ['g h', 'Ir a Hoy · también g t, g u, g o, g c, g i, g a'],
+  ['g h', 'Ir a Hoy · también g t, g u, g o, g c, g i, g a, g s (ajustes)'],
   ['Esc', 'Cerrar panel, menú o búsqueda'],
   ['Enter', 'Enviar mensaje o comentario (Shift+Enter, salto de línea)'],
   ['?', 'Esta ayuda'],

@@ -96,3 +96,11 @@ a.btn{text-decoration:none}
   .btn.icono{min-width:44px;justify-content:center}
   .seg button{min-height:40px;padding:6px 12px}
 }
+
+/* letra grande (Ajustes): sube los textos principales sin tocar el acomodo */
+html.letra-grande body{font-size:17px}
+html.letra-grande .in,html.letra-grande .btn,html.letra-grande .nav-item{font-size:16px}
+html.letra-grande .card .t,html.letra-grande .item-t .tit,html.letra-grande .msg .txt{font-size:16.5px}
+html.letra-grande .card .d,html.letra-grande .hint,html.letra-grande .feed .ev,html.letra-grande .persona-row ul{font-size:15.5px}
+html.letra-grande .chip,html.letra-grande .seg button{font-size:14.5px}
+html.letra-grande .meta,html.letra-grande .tag,html.letra-grande .pill,html.letra-grande .field label{font-size:12.5px}

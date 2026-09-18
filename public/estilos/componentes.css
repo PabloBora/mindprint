@@ -175,3 +175,17 @@ span.check{cursor:default}
   .composer .btn{min-width:48px;justify-content:center}
   .chat-log .msg .lnk{padding:8px 4px;margin:-8px 0}
 }
+
+/* columnas plegables: el nombre de la columna es un botón; plegada queda angosta solo en escritorio */
+.col-cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;border-radius:var(--r-sm);padding:2px 4px;margin:-2px -4px}
+.col-cab:hover{background:var(--surface-2);color:var(--ink)}
+.toolbar select.in{width:auto}
+@media (min-width:901px){
+  .col.plegada .cards,.col.plegada>.btn{display:none}
+  .col.plegada h3{padding:0}
+  .col.plegada .col-cab{writing-mode:vertical-rl;justify-content:flex-start;align-items:center;gap:10px;min-height:180px;padding:12px 0;margin:0;background:var(--surface-2);border-radius:var(--r)}
+  .col.plegada.over .col-cab{background:var(--accent-soft);outline:1px dashed var(--accent)}
+}
+/* menciones: botón que lleva a las tareas de la persona */
+button.mention{border:0;font:inherit;line-height:inherit;cursor:pointer}
+button.mention:hover{text-decoration:underline;text-underline-offset:2px}

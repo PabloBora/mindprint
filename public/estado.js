@@ -33,6 +33,48 @@ export const PROVOCACIONES = [
 export function lsGet(k, d) { try { const v = globalThis.localStorage && globalThis.localStorage.getItem(k); return v == null ? d : v; } catch { return d; } }
 export function lsSet(k, v) { try { globalThis.localStorage && globalThis.localStorage.setItem(k, v); } catch { /* sin storage */ } }
 
+/* ---------- filtros y preferencias que se recuerdan en este navegador ---------- */
+const FILTROS_DEF = {
+  tareas: { resp: 'todas', fase: 'todas', col: 'pendiente', verHechas: false, orden: 'vence', colapsadas: [] },
+  oportunidades: { autor: 'todos', q: '', stage: 'semilla', orden: 'votos', colapsadas: [] },
+  usuarios: { resp: 'todas', col: 'candidato', orden: 'siguiente', colapsadas: [] },
+  actividad: { quien: 'todos', tipo: 'todo' },
+};
+/** Lee los filtros guardados sobre los valores por defecto; tolera basura y migra la preferencia vieja de tareas. */
+export function leerFiltros(get = lsGet) {
+  let guardado = {}; try { guardado = JSON.parse(get('mp.filtros', '{}')) || {}; } catch { guardado = {}; }
+  const out = {};
+  for (const [k, def] of Object.entries(FILTROS_DEF)) {
+    const g = guardado[k] && typeof guardado[k] === 'object' && !Array.isArray(guardado[k]) ? guardado[k] : {};
+    out[k] = { ...def, ...g };
+    if ('colapsadas' in def) out[k].colapsadas = Array.isArray(out[k].colapsadas) ? out[k].colapsadas.filter((x) => typeof x === 'string') : [];
+  }
+  const viejo = get('mp.f.tareas.resp', null);
+  if (viejo && !(guardado.tareas && guardado.tareas.resp)) out.tareas.resp = viejo;
+  return out;
+}
+/** Guarda los filtros actuales (sin lo pasajero: «ver todas las hechas» y el texto de búsqueda). */
+export function guardarFiltros(set = lsSet) {
+  const { tareas, oportunidades, usuarios, actividad } = S.f;
+  set('mp.filtros', JSON.stringify({ tareas: { ...tareas, verHechas: false }, oportunidades: { ...oportunidades, q: '' }, usuarios, actividad }));
+}
+export const ORDENES = {
+  tareas: [['vence', 'Por fecha'], ['recientes', 'Recientes'], ['titulo', 'Por título']],
+  oportunidades: [['votos', 'Por votos'], ['criterios', 'Por criterios'], ['recientes', 'Recientes']],
+  usuarios: [['siguiente', 'Por siguiente paso'], ['recientes', 'Recientes'], ['nombre', 'Por nombre']],
+};
+const porReciente = (a, b) => String(b.actualizado || b.creado || '').localeCompare(String(a.actualizado || a.creado || ''));
+const porTexto = (campo) => (a, b) => String(a[campo] || '').localeCompare(String(b[campo] || ''), 'es', { sensitivity: 'base' });
+/** Ordena una copia de la lista según el tablero y el orden elegido. */
+export function ordenar(tablero, lista, orden) {
+  const l = lista.slice();
+  if (orden === 'recientes') return l.sort(porReciente);
+  if (tablero === 'tareas') return l.sort(orden === 'titulo' ? porTexto('titulo') : ordenTareas);
+  if (tablero === 'usuarios') return l.sort(orden === 'nombre' ? porTexto('empresa') : ordenProspectos);
+  if (tablero === 'oportunidades') return l.sort(orden === 'criterios' ? (a, b) => (scoreIdea(b) - scoreIdea(a)) || (votosIdea(b) - votosIdea(a)) : sortIdeas);
+  return l;
+}
+
 /* ---------- estado vivo ---------- */
 export const S = {
   estado: null, yo: null, enLinea: [], sinSesion: false, conexion: 'conectando', errEntrada: '',
@@ -41,11 +83,9 @@ export const S = {
   leido: lsGet('mp.chat.leido', ''),
   prov: Math.floor(Math.random() * PROVOCACIONES.length),
   tipoDec: 'otra',
-  f: {
-    tareas: { resp: lsGet('mp.f.tareas.resp', 'todas'), fase: 'todas', col: 'pendiente', verHechas: false },
-    oportunidades: { autor: 'todos', q: '', stage: 'semilla' },
-    usuarios: { resp: 'todas', col: 'candidato' },
-  },
+  f: leerFiltros(),
+  letra: lsGet('mp.letra', 'normal'),
+  sonido: lsGet('mp.sonido', 'no') === 'si',
   arrastrando: null, arrastrandoKind: 'idea',
   guardando: 0, ultimoGuardado: '', fotoOffline: false, version: '', versionNueva: null,
   menuAbierto: null, mover: null, ayuda: false, busqAbierta: false, busqIdx: -1, resaltado: '',
@@ -83,6 +123,8 @@ export const etiquetaEtapaP = (k) => (ETAPAS_P.find((e) => e[0] === k) || [])[1]
 
 export const comentariosDe = (tipo, id) => mensajes().filter((m) => m.ref && m.ref.tipo === tipo && m.ref.id === id);
 export const noLeidos = () => mensajes().filter((m) => m.quien !== yo() && String(m.fecha) > String(S.leido || '')).length;
+/** Mensajes sin leer de otros que me mencionan (@pablo, @max, @daniel). */
+export const mencionesSinLeer = () => { const me = yo(); if (!me) return 0; const re = new RegExp(`(^|[^\\w])@${me}\\b`, 'i'); return mensajes().filter((m) => m.quien !== me && String(m.fecha) > String(S.leido || '') && re.test(m.texto || '')).length; };
 export const semanasDe = (it) => (it && it.semanas) || 6;
 
 /** Referencia a un elemento por tipo: título y módulo/ruta para abrirlo. */

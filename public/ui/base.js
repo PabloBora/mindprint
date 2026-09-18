@@ -68,6 +68,19 @@ export const icono = (n, cls = '') => (ICONOS[n] || '').replace('class="ic"', `c
 export const avatar = (p, extra = '') => (p && (P()[p] || p === 'todos') ? `<span class="av ${esc(p)} ${extra}" title="${esc(nombre(p))}">${p === 'todos' ? '3' : esc(nombre(p)[0] || '?')}</span>` : '');
 export const pill = (texto, tipo = 'soft') => `<span class="pill ${tipo}">${texto}</span>`;
 
+/* ---------- sonido corto de aviso (WebAudio, sin archivos) ---------- */
+let audio = null;
+/** Dos notas breves. Devuelve false si el navegador no lo permite. */
+export function sonar() {
+  try {
+    const AC = globalThis.AudioContext || globalThis.webkitAudioContext; if (!AC) return false;
+    audio = audio || new AC(); if (audio.state === 'suspended') audio.resume();
+    const t0 = audio.currentTime;
+    [[880, 0], [1320, 0.12]].forEach(([hz, dt]) => { const o = audio.createOscillator(); const g = audio.createGain(); o.type = 'sine'; o.frequency.value = hz; g.gain.setValueAtTime(0.0001, t0 + dt); g.gain.exponentialRampToValueAtTime(0.18, t0 + dt + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dt + 0.18); o.connect(g).connect(audio.destination); o.start(t0 + dt); o.stop(t0 + dt + 0.2); });
+    return true;
+  } catch { return false; }
+}
+
 /* ---------- toast (con acción opcional, p. ej. Deshacer) ---------- */
 let toastTimer = null;
 export function toast(msg, { accion = '', onAccion = null, ms = 2800 } = {}) {

@@ -50,7 +50,9 @@ prueba lo verifica). Atajos: `/` buscar en todo, `n` nuevo en el módulo, `g` + 
 `?` ayuda, `Escape` cierra menú, panel o búsqueda. En el teléfono la búsqueda es la lupa de la cabecera, los filtros
 y las etapas se deslizan de lado, las tarjetas se mueven con su botón de flechas y Enter en el chat hace salto de
 línea (se envía con el botón). Pestañas: **Hoy**, **Tareas**, **Usuarios de
-prueba**, **Oportunidades**, **Chat**, **Iteración**, **Actividad**. Cada elemento se abre en el panel lateral con
+prueba**, **Oportunidades**, **Chat**, **Iteración**, **Actividad** y **Ajustes** (tema, letra, sonido de mensajes,
+semanas de la iteración, equipo y datos de la app). Filtros, orden y columnas plegadas de los tableros se recuerdan
+por navegador (`localStorage`, clave `mp.filtros`); Ajustes puede restablecerlos. Cada elemento se abre en el panel lateral con
 su ruta (`#/tareas/<id>`), así una liga abre directo la tarea.
 
 **Guardado y red.** Cada cambio se manda al momento y la cabecera dice «guardando…» / «guardado». Si el servidor

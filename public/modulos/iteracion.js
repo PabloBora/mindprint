@@ -1,17 +1,43 @@
 /* Iteración: fase, datos, entregables del Plan v0.3, decisiones y provocación. */
 import { S, P, yo, nombre, iteracion, PHASES, FASES, ARTEF, TIPOS_DEC, PROVOCACIONES, semanasDe } from '../estado.js';
-import { esc, fmtDia, fmtFechaHora, diasHasta, semanaDe, setPath } from '../ui/base.js';
+import { esc, fmtDia, fmtFechaHora, diasHasta, semanaDe, setPath, diaDe, hoy } from '../ui/base.js';
 import { ligaAbrir } from '../ui/piezas.js';
 import { guardarIteracion } from '../api.js';
+
+/* Línea de tiempo: los cinco tramos del ciclo, proporcionales a sus semanas, con fechas si hay inicio y marcas de hoy y de la prueba.
+   Límites en semanas para un ciclo de 6 (Detectar 0–1, Explorar 1–2, Construir 2–4, Probar 4–5.5, Decidir 5.5–6); se escalan a las semanas elegidas. */
+const LIMITES_6 = [0, 1, 2, 4, 5.5, 6];
+const masDias = (ymd, dias) => { const d = new Date(`${ymd}T00:00:00`); d.setDate(d.getDate() + Math.round(dias)); return diaDe(d.toISOString()); };
+const semTxt = (x) => String(Math.round(x * 10) / 10).replace('.', ',');
+/** «13–20 sep» si es el mismo mes; «29 sep–6 oct» si cambia. */
+export function rango(a, b) { const [da, ma] = fmtDia(a).split(' '); const [db, mb] = fmtDia(b).split(' '); return ma === mb ? `${da}–${db} ${mb}` : `${da} ${ma}–${db} ${mb}`; }
+export function tramos(it) {
+  const SEM = semanasDe(it); const b = LIMITES_6.map((x) => (x * SEM) / 6);
+  return PHASES.map((p, i) => ({ fase: p[0], nombre: p[1], desde: b[i], hasta: b[i + 1], inicio: it.inicio ? masDias(it.inicio, b[i] * 7) : '', fin: it.inicio ? masDias(it.inicio, b[i + 1] * 7) : '' }));
+}
+/** Posición (0–100) de una fecha dentro del ciclo, o null si no hay inicio o la fecha queda fuera. */
+export function posicion(it, ymd) {
+  if (!it.inicio || !ymd) return null;
+  const dias = (new Date(`${ymd}T00:00:00`) - new Date(`${it.inicio}T00:00:00`)) / 86400000; const total = semanasDe(it) * 7;
+  return dias < 0 || dias > total ? null : Math.round((dias / total) * 1000) / 10;
+}
+function lineaTiempo(it, idx) {
+  const ts = tramos(it); const pHoy = posicion(it, hoy()); const pDemo = posicion(it, it.demo);
+  return `<div class="linea" role="group" aria-label="Fases de la iteración">`
+    + ts.map((t, i) => `<button type="button" class="tramo${i < idx ? ' done' : ''}${i === idx ? ' now' : ''}" style="flex-grow:${t.hasta - t.desde}" data-act="fase" data-f="${t.fase}" aria-pressed="${i === idx}" title="Poner la iteración en ${esc(t.nombre)}"><span class="nom">${esc(t.nombre)}</span><small>${t.inicio ? rango(t.inicio, t.fin) : i === ts.length - 1 ? 'cierre' : `sem ${semTxt(t.desde)}–${semTxt(t.hasta)}`}</small></button>`).join('')
+    + (pHoy != null ? `<span class="marca hoy" style="left:${pHoy}%"><span>hoy</span></span>` : '')
+    + (pDemo != null ? `<span class="marca prueba" style="left:${pDemo}%"><span>prueba</span></span>` : '')
+    + '</div>';
+}
 
 function vista() {
   const it = iteracion(); const B = (c) => `data-bind="iter:actual:${c}"`;
   const idx = PHASES.findIndex((p) => p[0] === it.fase); const sem = semanaDe(it.inicio); const SEM = semanasDe(it);
   const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEM) * 100)); const dDemo = diasHasta(it.demo);
-  let h = '<div class="grid2">';
+  let h = `<section class="box caja-linea"><h2>Línea de tiempo<small>${it.inicio ? 'toca una fase para mover la iteración' : 'pon la fecha de inicio para ver las fechas de cada fase'}</small></h2>${lineaTiempo(it, idx)}</section>`;
+  h += '<div class="grid2">';
   h += `<div class="box"><h2>Iteración ${esc(it.numero || 1)}<small>${FASES[it.fase] || it.fase}${sem != null ? ` · semana ${sem} de ${SEM}` : ' · sin fecha de inicio'}${dDemo != null ? (dDemo < 0 ? ` · la prueba fue hace ${-dDemo} d` : dDemo === 0 ? ' · la prueba es hoy' : ` · ${dDemo} d para la prueba`) : ''}</small></h2>`
     + `<div><div class="bar"><i style="width:${pct}%"></i></div><div class="barlbl"><span>${it.inicio ? `inicio ${fmtDia(it.inicio)}` : 'pon la fecha de inicio'}</span><span>${it.demo ? `prueba ${fmtDia(it.demo)}` : `${SEM} semanas`}</span></div></div>`
-    + `<div class="stepper">${PHASES.map((p, i) => `<button type="button" class="step${i < idx ? ' done' : ''}${i === idx ? ' now' : ''}" data-act="fase" data-f="${p[0]}"><span>${p[1]}</span><small>${p[2]}</small></button>`).join('')}</div>`
     + '<div class="datos">'
     + `<div class="field"><label>Inicio</label><input class="in" type="date" ${B('inicio')} value="${esc(it.inicio)}"></div>`
     + `<div class="field"><label>Prueba con usuarios (fecha objetivo)</label><input class="in" type="date" ${B('demo')} value="${esc(it.demo)}"></div>`

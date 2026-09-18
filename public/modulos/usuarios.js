@@ -1,7 +1,7 @@
 /* Usuarios de prueba: gente cercana con la que se valida; etapas y señales del Plan v0.3. */
-import { S, prospectos, ideas, prospectoById, enJuego, ordenProspectos, RESP, ETAPAS_P, SENALES, P } from '../estado.js';
+import { S, prospectos, ideas, prospectoById, enJuego, RESP, ETAPAS_P, SENALES, P, ORDENES, ordenar, guardarFiltros } from '../estado.js';
 import { esc, icono, avatar, uid, toast, confirmar, setPath } from '../ui/base.js';
-import { cardProspecto, seccionComentarios, pieEdicion } from '../ui/piezas.js';
+import { cardProspecto, seccionComentarios, pieEdicion, colTablero, columnasGrid, selectOrden } from '../ui/piezas.js';
 import { guardarProspecto, borrarProspecto } from '../api.js';
 import { rutaDe, reemplazar } from '../ruta.js';
 
@@ -12,13 +12,13 @@ const opcionesCaso = (sel) => `<option value="">por definir</option>${ideas().sl
 function vista() {
   let list = prospectos().filter(coincide);
   if (f().resp !== 'todas') list = list.filter((p) => p.responsable === f().resp || p.responsable === 'todos');
-  let h = `<div class="toolbar"><div class="chips"><button class="chip" data-act="fresp-p" data-v="todas" aria-pressed="${f().resp === 'todas'}">Todos</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fresp-p" data-v="${p}" aria-pressed="${f().resp === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><span class="hint">Gente y empresas cercanas con las que validamos sin fricción. Miramos si la prueban sin insistir, la repiten, piden más, la recomiendan o pagarían.</span><a class="btn primary sm" href="${rutaDe('usuarios', 'nuevo')}">${icono('mas', 'sm')}Nuevo usuario de prueba</a></div>`;
+  let h = `<div class="toolbar"><div class="chips"><button class="chip" data-act="fresp-p" data-v="todas" aria-pressed="${f().resp === 'todas'}">Todos</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fresp-p" data-v="${p}" aria-pressed="${f().resp === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><span class="hint">Gente y empresas cercanas con las que validamos sin fricción. Miramos si la prueban sin insistir, la repiten, piden más, la recomiendan o pagarían.</span>${selectOrden('usuarios', f().orden, ORDENES.usuarios)}<a class="btn primary sm" href="${rutaDe('usuarios', 'nuevo')}">${icono('mas', 'sm')}Nuevo usuario de prueba</a></div>`;
   if (!prospectos().length) h += '<div class="vacio"><b>Todavía no hay usuarios de prueba.</b> Agrega a alguien cercano; después abre la tarjeta para anotar cómo lo conocemos, qué prueba, las señales y el siguiente paso con fecha.</div>';
   h += `<div class="stagebar chips">${ETAPAS_P.map((e) => `<button class="chip" data-act="colp" data-v="${e[0]}" aria-pressed="${f().col === e[0]}">${e[1]} <span class="tag">${list.filter((p) => p.etapa === e[0]).length}</span></button>`).join('')}</div>`;
-  h += '<div class="board">';
+  h += `<div class="board" style="grid-template-columns:${columnasGrid(ETAPAS_P.map((e) => e[0]), f().colapsadas)}">`;
   for (const [k, label] of ETAPAS_P) {
-    const items = list.filter((p) => p.etapa === k).sort(ordenProspectos);
-    h += `<section class="col${f().col === k ? ' active' : ''}${items.length ? '' : ' empty'}" data-col="${k}" data-kind="prospecto"><h3><span class="${k === 'jala' ? 'hl' : ''}">${label}</span><span class="n">${items.length}</span></h3><div class="cards">${items.map(cardProspecto).join('')}</div></section>`;
+    const items = ordenar('usuarios', list.filter((p) => p.etapa === k), f().orden);
+    h += colTablero({ tablero: 'usuarios', kind: 'prospecto', k, label, total: items.length, cards: items.map(cardProspecto).join(''), activa: f().col === k, plegada: f().colapsadas.includes(k), hl: k === 'jala' });
   }
   h += '</div>';
   return h;
@@ -58,9 +58,10 @@ export default {
   id: 'usuarios', titulo: 'Usuarios de prueba', corto: 'Usuarios', icono: 'usuarios', orden: 3, principal: true, nuevo: true,
   badge: () => { const n = prospectos().filter(enJuego).length; return n ? String(n) : ''; },
   vista, panel,
+  filtros: (k, v) => { if (k === 'orden') { f().orden = v; guardarFiltros(); } },
   acciones: {
-    'fresp-p': (el) => { f().resp = el.dataset.v; S.render(); },
-    'colp': (el) => { f().col = el.dataset.v; S.render(); },
+    'fresp-p': (el) => { f().resp = el.dataset.v; guardarFiltros(); S.render(); },
+    'colp': (el) => { f().col = el.dataset.v; guardarFiltros(); S.render(); },
     'etapa-p': async (el) => { const p = prospectoById(el.dataset.id); if (p && p.etapa !== el.dataset.s) await guardarProspecto({ ...p, etapa: el.dataset.s }); },
     'del-prospecto': async (el) => { const p = prospectoById(el.dataset.id); if (!p) return; if (!(await confirmar({ titulo: 'Eliminar usuario de prueba', texto: `«${p.empresa}» se borra para los tres.`, ok: 'Eliminar', peligro: true }))) return; const copia = { ...p }; reemplazar(rutaDe('usuarios')); if (await borrarProspecto(p.id)) toast('Usuario de prueba eliminado', { accion: 'Deshacer', onAccion: () => guardarProspecto(copia), ms: 6000 }); },
   },
