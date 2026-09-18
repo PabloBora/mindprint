@@ -8,13 +8,16 @@ import { guardarTarea } from '../api.js';
 function vista() {
   const it = iteracion(); const me = yo();
   const idx = PHASES.findIndex((p) => p[0] === it.fase); const sem = semanaDe(it.inicio); const dDemo = diasHasta(it.demo);
+  const faltan = [!it.inicio && 'fecha de inicio', !it.demo && 'fecha de prueba', !it.sincronia && 'sincronía', !it.canal && 'canal'].filter(Boolean);
   const SEM = semanasDe(it); const pct = sem == null ? 0 : Math.min(100, Math.round((sem / SEM) * 100));
   const mias = tareas().filter((t) => esMia(t) && t.estado !== 'hecha').sort(ordenTareas);
   const hechasHoy = tareas().filter((t) => esMia(t) && t.estado === 'hecha' && diaDe(t.actualizado) === hoy()).length;
   let h = `<section class="hero"><div class="top-line"><h2>Iteración ${esc(it.numero || 1)} · <span class="fase">${esc(FASES[it.fase] || it.fase)}</span></h2><div class="facts">`
-    + `<span>${sem != null ? `semana <b>${sem}</b> de ${SEM}` : '<b>sin fecha de inicio</b>'}</span>`
-    + `<span>${dDemo == null ? 'prueba <b>sin fecha</b>' : dDemo < 0 ? `prueba hace <b>${-dDemo} d</b>` : dDemo === 0 ? 'prueba <b>hoy</b>' : `prueba en <b>${dDemo} d</b> (${fmtDia(it.demo)})`}</span>`
-    + `<span>sincronía <b>${esc(it.sincronia || 'por definir')}</b></span><span>canal <b>${esc(it.canal || 'por definir')}</b></span></div></div>`
+    + (sem != null ? `<span>semana <b>${sem}</b> de ${SEM}</span>` : '')
+    + (dDemo == null ? '' : `<span>${dDemo < 0 ? `prueba hace <b>${-dDemo} d</b>` : dDemo === 0 ? 'prueba <b>hoy</b>' : `prueba en <b>${dDemo} d</b> (${fmtDia(it.demo)})`}</span>`)
+    + (it.sincronia ? `<span>sincronía <b>${esc(it.sincronia)}</b></span>` : '') + (it.canal ? `<span>canal <b>${esc(it.canal)}</b></span>` : '')
+    + '</div></div>'
+    + (faltan.length ? `<a class="completar" href="${rutaDe('iteracion')}">Falta${faltan.length > 1 ? 'n' : ''} ${faltan.join(', ')} · completar</a>` : '')
     + `<div class="bar"><i style="width:${pct}%"></i></div>`
     + `<div class="mini-steps">${PHASES.map((p, i) => `<a href="${rutaDe('iteracion')}" class="${i < idx ? 'done' : ''}${i === idx ? 'now' : ''}" title="Ir a Iteración">${p[1]}</a>`).join('')}</div></section>`;
   h += '<div class="grid-hoy">';

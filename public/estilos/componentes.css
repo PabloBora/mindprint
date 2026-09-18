@@ -1,5 +1,5 @@
 /* Componentes compartidos: tableros, tarjetas, listas, formularios de alta, feed, chat, cajas. */
-.panel-mod{display:grid;gap:14px}
+.panel-mod{display:grid;gap:14px;grid-template-columns:minmax(0,1fr)}
 .sub{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap;color:var(--muted);font-size:13px}
 .sub b{color:var(--ink);font-weight:600}
 .toolbar{display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center}
@@ -17,7 +17,7 @@
 .board.t4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .col h3{font-family:var(--body);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 8px}
 .col h3 .n{font-family:var(--mono);font-weight:500}
-.hl{background:linear-gradient(transparent 30%,var(--marker) 30%,var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 4px;margin:0 -2px}
+.hl{background:linear-gradient(transparent var(--marker-desde),var(--marker) var(--marker-desde),var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 4px;margin:0 -2px}
 .col .cards{display:grid;gap:8px;min-height:60px;border-radius:var(--r);padding:2px;transition:background .15s}
 .col.over .cards{background:var(--accent-soft);outline:1px dashed var(--accent)}
 .col.empty .cards::after{content:"arrastra una tarjeta aquí";color:var(--line-strong);padding:10px 6px;font-size:12px;font-family:var(--mono)}
@@ -146,3 +146,32 @@ span.check{cursor:default}
 .atajos{display:grid;grid-template-columns:auto 1fr;gap:8px 14px;align-items:center;font-size:14px}
 .atajos kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:5px;padding:2px 7px;background:var(--surface);white-space:nowrap;justify-self:start}
 .panel-ayuda .texto{display:grid;gap:8px;font-size:14px;color:var(--ink-2);line-height:1.5}
+
+/* chat: separador de no leídos y ayuda de teclado */
+.chat-log .day.no-leidos{color:var(--accent);border-bottom-color:var(--accent)}
+.composer-ayuda{grid-column:1/-1;font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:-2px}
+
+/* cuando todo el tablero está vacío, basta con un mensaje */
+.vacio~.board .col.empty .cards::after{content:none}
+
+@media (max-width:900px){
+  /* filtros y pestañas de etapa: una sola fila que se desliza de lado */
+  .toolbar{gap:10px}
+  .toolbar>.chips,.stagebar{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-14px;padding:2px 14px;scroll-padding-inline:14px}
+  .toolbar>.chips{flex:0 0 calc(100% + 28px);max-width:none}
+  .toolbar>.chips::-webkit-scrollbar,.stagebar::-webkit-scrollbar{display:none}
+  .toolbar>.hint{display:none}
+  .toolbar>select.in{flex:1 1 140px;min-height:44px}
+  .toolbar>.btn{flex:0 0 auto}
+  .sub{gap:4px 14px;font-size:13px}
+  /* check de tarea y botón de mover con área táctil grande sin cambiar cómo se ven */
+  .check{position:relative}
+  .check::before{content:"";position:absolute;inset:-11px;border-radius:50%}
+  .card .mover{width:40px;height:40px;top:2px;right:2px}
+  .card .t{padding-right:34px}
+  .item-t .tit{padding-block:4px;min-height:36px}
+  .composer{grid-template-columns:1fr auto}
+  .composer .btn span{display:none}
+  .composer .btn{min-width:48px;justify-content:center}
+  .chat-log .msg .lnk{padding:8px 4px;margin:-8px 0}
+}

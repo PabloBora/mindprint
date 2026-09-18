@@ -47,7 +47,9 @@ public/
 
 Agregar un módulo = un archivo en `modulos/` registrado en `app.js` **y en la lista `SHELL` de `sw.js`** (una
 prueba lo verifica). Atajos: `/` buscar en todo, `n` nuevo en el módulo, `g` + `h/t/u/o/c/i/a` ir a un módulo,
-`?` ayuda, `Escape` cierra menú, panel o búsqueda. Pestañas: **Hoy**, **Tareas**, **Usuarios de
+`?` ayuda, `Escape` cierra menú, panel o búsqueda. En el teléfono la búsqueda es la lupa de la cabecera, los filtros
+y las etapas se deslizan de lado, las tarjetas se mueven con su botón de flechas y Enter en el chat hace salto de
+línea (se envía con el botón). Pestañas: **Hoy**, **Tareas**, **Usuarios de
 prueba**, **Oportunidades**, **Chat**, **Iteración**, **Actividad**. Cada elemento se abre en el panel lateral con
 su ruta (`#/tareas/<id>`), así una liga abre directo la tarea.
 

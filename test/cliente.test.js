@@ -77,3 +77,30 @@ test('tarjetas y mensajes marcan lo pendiente de enviar y traen el botón de mov
   const mp = itemMsg({ ...S.estado.mensajes[1], _pendiente: true }, false); assert.ok(mp.includes(' por-enviar"')); assert.ok(mp.includes('por enviar'));
   S.resaltado = '';
 });
+
+test('pulido móvil: el panel lleva el tipo en la cabecera, Hoy avisa qué falta de la iteración y el chat separa los no leídos', async () => {
+  S.estado = fixture(); S.yo = S.estado.yo; S.enLinea = []; S.ruta = { mod: 'hoy', id: null, sub: null }; S.q = '';
+  const tit = { tareas: ['t1', 'Tarea', 'Mapa del proceso'], usuarios: ['u1', 'Usuario de prueba', 'Maquinados &quot;del&quot; Bajío'], oportunidades: ['o1', 'Oportunidad', 'Agentes de facturación &lt;b&gt;'] };
+  for (const [mod, [id, tipo, nombre]] of Object.entries(tit)) assert.equal((await import(`../public/modulos/${mod}.js`)).default.panel(id).titulo, `${tipo}<span class="sr-only">: ${nombre}</span>`, `${mod}: tipo visible y nombre (escapado) para lectores de pantalla`);
+  const hoy = (await import('../public/modulos/hoy.js')).default;
+  assert.ok(!hoy.vista().includes('class="completar"'), 'con todo lleno no hay aviso');
+  S.estado.iteracion = { ...S.estado.iteracion, inicio: '', demo: '', canal: '' };
+  const h = hoy.vista();
+  assert.match(h, /class="completar" href="#\/iteracion">Faltan fecha de inicio, fecha de prueba, canal · completar</);
+  assert.doesNotMatch(h, /por definir|sin fecha/, 'ya no se pintan huecos uno por uno');
+  assert.match(h, /sincronía <b>martes<\/b>/);
+  S.estado.iteracion = { ...S.estado.iteracion, sincronia: '' };
+  const vacia = hoy.vista(); assert.ok(vacia.includes('<div class="facts"></div>'), 'sin datos, .facts queda vacío de verdad para :empty');
+  assert.match(vacia, /Faltan fecha de inicio, fecha de prueba, sincronía, canal/);
+  S.estado.iteracion = { ...S.estado.iteracion, inicio: '2026-09-08', demo: '2026-10-16', sincronia: 'martes' };
+  assert.match(hoy.vista(), />Falta canal · completar</, 'un solo dato: singular');
+  S.estado = fixture(); S.yo = S.estado.yo; S.leidoAlAbrir = '2026-09-11T10:00:00Z';
+  const chat = (await import('../public/modulos/chat.js')).default.vista();
+  assert.ok(chat.includes('class="day no-leidos"')); assert.ok(chat.includes('aria-describedby="chat-ayuda"') && chat.includes('id="chat-ayuda"'), 'sin pantalla táctil: ayuda de Enter');
+  const mmReal = globalThis.matchMedia; globalThis.matchMedia = (q) => ({ matches: q === '(pointer: coarse)' });
+  try { const t = (await import('../public/modulos/chat.js')).default.vista(); assert.ok(!t.includes('chat-ayuda'), 'en táctil no se promete que Enter envía'); }
+  finally { if (mmReal) globalThis.matchMedia = mmReal; else delete globalThis.matchMedia; }
+  S.leidoAlAbrir = null;
+  const oport = (await import('../public/modulos/oportunidades.js')).default;
+  assert.equal(oport.corto, 'Oportunidades', 'el nombre corto sirve de título en la cabecera del teléfono');
+});

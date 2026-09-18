@@ -1,8 +1,8 @@
 /* Módulos: Hoy, Iteración, entrada. */
-.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;gap:12px}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
 .hero .top-line{display:flex;align-items:baseline;gap:10px 18px;flex-wrap:wrap}
 .hero h2{font-family:var(--display);font-size:24px;font-weight:600}
-.hero h2 .fase{background:linear-gradient(transparent 30%,var(--marker) 30%,var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 4px}
+.hero h2 .fase{background:linear-gradient(transparent var(--marker-desde),var(--marker) var(--marker-desde),var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 4px}
 .hero .facts{display:flex;gap:6px 18px;flex-wrap:wrap;font-family:var(--mono);font-size:12px;color:var(--muted)}
 .hero .facts b{color:var(--ink);font-weight:500}
 .mini-steps{display:flex;gap:4px;flex-wrap:wrap}
@@ -22,7 +22,8 @@
 .step.done{color:var(--muted)}
 .step.done small::before{content:"✓ "}
 .step.now{border-color:var(--ink)}
-.step.now span{background:linear-gradient(transparent 30%,var(--marker) 30%,var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 3px}
+.step span{justify-self:center}
+.step.now span{border-radius:2px;background:linear-gradient(transparent var(--marker-desde),var(--marker) var(--marker-desde),var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 3px}
 @media (max-width:760px){.stepper{grid-template-columns:repeat(2,1fr)}.step:last-child{grid-column:1/-1}}
 .datos{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
 @media (max-width:520px){.datos{grid-template-columns:1fr}}
@@ -50,3 +51,21 @@
 .entrada .ayuda{font-size:13px;color:var(--muted)}
 .entrada .err{color:var(--bad);font-size:13px}
 .foot-links{margin-top:22px;font-size:13px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap}
+
+/* Hoy: aviso de datos faltantes de la iteración */
+.hero .completar{justify-self:start;font-size:13px;color:var(--warn);background:var(--warn-soft);border-radius:999px;padding:4px 12px;text-decoration:none;font-weight:500}
+.hero .completar:hover{text-decoration:underline}
+.hero .facts:empty{display:none}
+@media (max-width:900px){
+  .hero{padding:14px 16px;gap:10px}
+  .hero h2{font-size:21px}
+  .mini-steps{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin-inline:-16px;padding:2px 16px}
+  .mini-steps::-webkit-scrollbar{display:none}
+  .mini-steps a{white-space:nowrap;min-height:40px;display:inline-flex;align-items:center;padding:6px 14px;font-size:13px}
+  .hero .completar{min-height:40px;display:inline-flex;align-items:center}
+  .quick{grid-template-columns:1fr auto}
+  .quick .in:first-child{grid-column:1/-1}
+  .quick .in,.quick .btn{min-height:44px}
+  .box{padding:14px 16px}
+  .box .more{min-height:40px}
+}

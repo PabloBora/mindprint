@@ -55,9 +55,10 @@ test('tokens.css: paleta completa en :root y los dos bloques de tema oscuro', ()
   assert.match(css, /:root\{[^}]*--paper:#F1F2EE/);
   assert.match(css, /@media \(prefers-color-scheme: dark\)\{\s*:root:not\(\[data-theme="light"\]\)/);
   assert.match(css, /:root\[data-theme="dark"\]\{/);
-  for (const tok of ['--paper', '--surface', '--ink', '--accent', '--marker', '--p-pablo', '--p-max', '--p-daniel']) assert.equal((css.match(new RegExp(`${tok}:`, 'g')) || []).length, 3, `${tok} en los tres bloques`);
+  for (const tok of ['--paper', '--surface', '--ink', '--accent', '--marker', '--marker-desde', '--p-pablo', '--p-max', '--p-daniel']) assert.equal((css.match(new RegExp(`${tok}:`, 'g')) || []).length, 3, `${tok} en los tres bloques`);
   const otras = ['base', 'shell', 'componentes', 'modulos'].map((h) => leer('estilos', `${h}.css`)).join('\n');
   assert.doesNotMatch(otras, /#[0-9A-Fa-f]{6}\b(?![^{]*\})/, 'las demás hojas no definen colores fuera de tokens');
+  for (const regla of otras.replace(/\/\*[\s\S]*?\*\//g, '').split('}')) if (regla.includes(':has(')) assert.ok(!/\.buscando/.test(regla.split('{').slice(-2)[0]), `una regla con :has() no mezcla el respaldo .buscando: ${regla.trim().slice(0, 60)}`);
 });
 
 test('el servidor sirve la interfaz con CSP, tipos correctos, manifest y ETag en el estado', async () => {

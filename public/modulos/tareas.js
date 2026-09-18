@@ -16,7 +16,7 @@ function vista() {
   let h = `<div class="toolbar"><div class="chips"><button class="chip" data-act="ftareas" data-v="todas" aria-pressed="${f().resp === 'todas'}">Todas</button><button class="chip" data-act="ftareas" data-v="mias" aria-pressed="${f().resp === 'mias'}">Mías</button>${Object.keys(RESP).filter((k) => k !== 'todos').map((p) => `<button class="chip" data-act="ftareas" data-v="${p}" aria-pressed="${f().resp === p}">${avatar(p)}${esc(RESP[p])}</button>`).join('')}</div>`
     + `<select class="in" data-filtro="fase" aria-label="Fase" style="width:auto"><option value="todas"${f().fase === 'todas' ? ' selected' : ''}>Todas las fases</option>${Object.entries(FASES).map(([k, n]) => `<option value="${k}"${f().fase === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`
     + `<a class="btn primary sm" href="${rutaDe('tareas', 'nuevo')}">${icono('mas', 'sm')}Nueva tarea</a></div>`;
-  if (!tareas().length) h += '<div class="vacio"><b>Sin tareas todavía.</b> Anota lo que alguien tiene que hacer, con responsable y fecha si la hay. Arrastra las tarjetas entre columnas conforme avancen.</div>';
+  if (!tareas().length) h += '<div class="vacio"><b>Sin tareas todavía.</b> Anota lo que alguien tiene que hacer, con responsable y fecha si la hay. <span class="solo-escritorio">Arrastra las tarjetas entre columnas conforme avancen.</span><span class="solo-movil">Cámbialas de columna con el botón de flechas de cada tarjeta.</span></div>';
   h += `<div class="stagebar chips">${ESTADOS.map((s) => `<button class="chip" data-act="colt" data-v="${s[0]}" aria-pressed="${f().col === s[0]}">${s[1]} <span class="tag">${list.filter((t) => t.estado === s[0]).length}</span></button>`).join('')}</div>`;
   h += '<div class="board t4">';
   for (const [k, label] of ESTADOS) {
@@ -54,7 +54,7 @@ function panel(id) {
       <div class="field"><label>Oportunidad relacionada</label><select class="in" ${B('ideaId')}>${opcionesIdea(t.ideaId)}</select></div>
     </div></div>
     ${seccionComentarios('tarea', t.id)}`;
-  return { titulo: esc(t.titulo), html, pie: pieEdicion(t, 'del-tarea', t.id) };
+  return { titulo: `Tarea<span class="sr-only">: ${esc(t.titulo)}</span>`, html, pie: pieEdicion(t, 'del-tarea', t.id) };
 }
 
 export default {

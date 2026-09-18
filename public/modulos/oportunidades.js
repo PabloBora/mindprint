@@ -11,7 +11,7 @@ const coincide = (i) => { const q = (S.q || '').trim().toLowerCase(); return !q 
 function vista() {
   const todas = ideas(); const visibles = todas.filter((i) => (f().autor === 'todos' || i.autor === f().autor) && coincide(i));
   const cand = todas.filter((i) => i.etapa === 'candidata').length; const eleg = todas.filter((i) => i.etapa === 'elegida').length; const quedan = Math.max(0, VOTOS_MAX - votosUsados(yo()));
-  let h = `<div class="sub"><span><b>${todas.length}</b> oportunidades</span><span><b>${cand}</b> candidatas</span><span><b>${eleg}</b> elegidas</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span>Se ordenan por votos y luego por criterios.</span></div>`;
+  let h = `<div class="sub"><span><b>${todas.length}</b> oportunidades</span><span><b>${cand}</b> candidata${cand === 1 ? '' : 's'}</span><span><b>${eleg}</b> elegida${eleg === 1 ? '' : 's'}</span><span class="mono">te quedan <b>${quedan}</b> de ${VOTOS_MAX} votos</span><span class="solo-escritorio">Se ordenan por votos y luego por criterios.</span></div>`;
   h += `<div class="toolbar"><div class="chips"><button class="chip" data-act="fautor" data-v="todos" aria-pressed="${f().autor === 'todos'}">Todas</button>${Object.keys(P()).map((p) => `<button class="chip" data-act="fautor" data-v="${p}" aria-pressed="${f().autor === p}">${avatar(p)}${esc(P()[p].nombre)}</button>`).join('')}</div><a class="btn primary sm" href="${rutaDe('oportunidades', 'nuevo')}">${icono('mas', 'sm')}Nueva oportunidad</a></div>`;
   if (!todas.length) h += '<div class="vacio"><b>Todavía no hay oportunidades.</b> Escribe la primera: con el título basta. Después abre la tarjeta para contar el dolor, quién paga y qué haría el agente, y califica los cuatro criterios. Cada quien tiene 3 votos.</div>';
   h += `<div class="stagebar chips">${STAGES.map((s) => `<button class="chip" data-act="stage" data-s="${s[0]}" aria-pressed="${f().stage === s[0]}">${s[1]} <span class="tag">${visibles.filter((i) => i.etapa === s[0]).length}</span></button>`).join('')}</div>`;
@@ -52,11 +52,11 @@ function panel(id) {
     </div>
     <div class="field"><label>Notas</label><textarea class="in" rows="2" ${B('notas')}>${esc(i.notas)}</textarea></div>
     ${seccionComentarios('idea', i.id)}`;
-  return { titulo: esc(i.titulo), html, pie: pieEdicion(i, 'del-idea', i.id) };
+  return { titulo: `Oportunidad<span class="sr-only">: ${esc(i.titulo)}</span>`, html, pie: pieEdicion(i, 'del-idea', i.id) };
 }
 
 export default {
-  id: 'oportunidades', titulo: 'Oportunidades', corto: 'Oport.', icono: 'oportunidades', orden: 4, principal: false, nuevo: true,
+  id: 'oportunidades', titulo: 'Oportunidades', corto: 'Oportunidades', icono: 'oportunidades', orden: 4, principal: false, nuevo: true,
   badge: () => (ideas().length ? String(ideas().length) : ''),
   vista, panel,
   acciones: {

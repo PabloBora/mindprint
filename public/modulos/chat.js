@@ -1,7 +1,7 @@
 /* Chat del equipo; también procesa los comentarios (mensajes con referencia) de los paneles. */
 import { S, mensajes, noLeidos } from '../estado.js';
 import { rutaDe, reemplazar } from '../ruta.js';
-import { esc, icono, diaDe, etiquetaDia, confirmar, toast } from '../ui/base.js';
+import { esc, esTactil, icono, diaDe, etiquetaDia, confirmar, toast } from '../ui/base.js';
 import { itemMsg } from '../ui/piezas.js';
 import { enviarMensaje, borrarMensaje, marcarLeido } from '../api.js';
 
@@ -13,10 +13,10 @@ function vista() {
   let dia = ''; let sep = false;
   for (const m of items) {
     const d = diaDe(m.fecha); if (d !== dia) { dia = d; h += `<div class="day">${esc(etiquetaDia(d))}</div>`; }
-    if (!sep && m.quien !== (S.yo && S.yo.persona) && String(m.fecha) > String(S.leidoAlAbrir || '')) { sep = true; h += '<div class="day">No leídos</div>'; }
+    if (!sep && m.quien !== (S.yo && S.yo.persona) && String(m.fecha) > String(S.leidoAlAbrir || '')) { sep = true; h += '<div class="day no-leidos">No leídos</div>'; }
     h += itemMsg(m, false);
   }
-  h += `</div><form class="composer" data-submit="add-msg"><textarea class="in" id="chat-new" data-keep="chat-new" rows="2" placeholder="Escribe al equipo. Enter envía, Shift+Enter salto de línea. @pablo @max @daniel para mencionar." maxlength="1000"></textarea><button class="btn primary" type="submit">${icono('enviar')}Enviar</button></form></div>`;
+  h += `</div><form class="composer" data-submit="add-msg"><textarea class="in" id="chat-new" data-keep="chat-new" rows="2" placeholder="Escribe al equipo · @max, @daniel o @pablo para mencionar" maxlength="1000"${esTactil() ? '' : ' aria-describedby="chat-ayuda"'}></textarea><button class="btn primary" type="submit">${icono('enviar')}<span>Enviar</span></button>${esTactil() ? '' : '<span class="composer-ayuda" id="chat-ayuda">Enter envía · Shift+Enter hace salto de línea</span>'}</form></div>`;
   return h;
 }
 function alMostrar() {

@@ -142,3 +142,40 @@
   .menu.hoja .item{padding:12px 12px;font-size:15px}
 }
 .vacio.error{display:grid;gap:12px}
+
+/* cabecera en teléfono: título completo corto y búsqueda que se abre al tocar la lupa.
+   Las reglas con :has() van aparte de las de .buscando: si el navegador no soporta :has(), una lista mixta se
+   descartaría entera y el respaldo por clase tampoco aplicaría. */
+.titulo-mod .corto{display:none}
+.buscar-cancelar{display:none;flex:none;font-size:14px;font-weight:500;color:var(--accent);padding:0 4px;min-height:40px}
+.buscar>.ic{pointer-events:none}
+@media (max-width:900px){
+  .cabecera{gap:4px}
+  .cabecera .titulo-mod{min-width:0;flex:1 1 auto}
+  .cabecera .titulo-mod>.ic{display:none}
+  .titulo-mod .largo{display:none}
+  .titulo-mod .corto{display:inline;overflow:hidden;text-overflow:ellipsis}
+  .buscar{flex:0 0 44px;margin-left:0;order:2}
+  .cabecera .derecha{order:3;margin-left:0;gap:2px}
+  .buscar input{height:44px;padding:0 0 0 42px;background:transparent;border-color:transparent;color:transparent;cursor:pointer}
+  .buscar input::placeholder{color:transparent}
+  .buscar input::-webkit-search-cancel-button{display:none}
+  .buscar>.ic{left:12px;width:20px;height:20px;color:var(--ink-2)}
+  .cabecera.buscando .buscar{flex:1 1 auto}
+  .cabecera:has(.buscar:focus-within) .buscar{flex:1 1 auto}
+  .cabecera.buscando .buscar input{background:var(--surface);border-color:var(--accent);color:var(--ink);padding-right:10px;cursor:text}
+  .cabecera:has(.buscar:focus-within) .buscar input{background:var(--surface);border-color:var(--accent);color:var(--ink);padding-right:10px;cursor:text}
+  .cabecera.buscando .buscar input::placeholder{color:var(--muted)}
+  .cabecera:has(.buscar:focus-within) .buscar input::placeholder{color:var(--muted)}
+  .cabecera.buscando .buscar>.ic{left:12px;color:var(--muted)}
+  .cabecera:has(.buscar:focus-within) .buscar>.ic{left:12px;color:var(--muted)}
+  .cabecera.buscando .titulo-mod,.cabecera.buscando .derecha{display:none}
+  .cabecera:has(.buscar:focus-within) .titulo-mod,.cabecera:has(.buscar:focus-within) .derecha{display:none}
+  .cabecera.buscando .buscar-cancelar{display:inline-flex;align-items:center;order:3}
+  .cabecera:has(.buscar:focus-within) .buscar-cancelar{display:inline-flex;align-items:center;order:3}
+  .cab-icono{width:44px;height:44px}
+  .btn-nuevo{width:44px;height:44px;justify-content:center}
+  .cab-persona{padding:2px;min-height:44px;min-width:44px;justify-content:center}
+  .guardado-cab span:last-child{display:none}
+  .version-nueva span{display:none}
+}
