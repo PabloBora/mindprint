@@ -1,7 +1,7 @@
 /* Tareas: tablero por estado, panel de edición y alta. */
-import { S, yo, tareas, ideas, iteracion, tareaById, esMia, ordenTareas, RESP, FASES, ESTADOS, lsSet } from '../estado.js';
+import { S, yo, tareas, ideas, iteracion, tareaById, esMia, RESP, FASES, ESTADOS, ORDENES, ordenar, guardarFiltros } from '../estado.js';
 import { esc, icono, avatar, uid, toast, confirmar } from '../ui/base.js';
-import { cardTarea, seccionComentarios, pieEdicion } from '../ui/piezas.js';
+import { cardTarea, seccionComentarios, pieEdicion, colTablero, columnasGrid, selectOrden } from '../ui/piezas.js';
 import { guardarTarea, borrarTarea } from '../api.js';
 import { rutaDe, reemplazar } from '../ruta.js';
 
@@ -15,15 +15,18 @@ function vista() {
   if (f().fase !== 'todas') list = list.filter((t) => t.fase === f().fase);
   let h = `<div class="toolbar"><div class="chips"><button class="chip" data-act="ftareas" data-v="todas" aria-pressed="${f().resp === 'todas'}">Todas</button><button class="chip" data-act="ftareas" data-v="mias" aria-pressed="${f().resp === 'mias'}">Mías</button>${Object.keys(RESP).filter((k) => k !== 'todos').map((p) => `<button class="chip" data-act="ftareas" data-v="${p}" aria-pressed="${f().resp === p}">${avatar(p)}${esc(RESP[p])}</button>`).join('')}</div>`
     + `<select class="in" data-filtro="fase" aria-label="Fase" style="width:auto"><option value="todas"${f().fase === 'todas' ? ' selected' : ''}>Todas las fases</option>${Object.entries(FASES).map(([k, n]) => `<option value="${k}"${f().fase === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`
+    + selectOrden('tareas', f().orden, ORDENES.tareas)
     + `<a class="btn primary sm" href="${rutaDe('tareas', 'nuevo')}">${icono('mas', 'sm')}Nueva tarea</a></div>`;
   if (!tareas().length) h += '<div class="vacio"><b>Sin tareas todavía.</b> Anota lo que alguien tiene que hacer, con responsable y fecha si la hay. <span class="solo-escritorio">Arrastra las tarjetas entre columnas conforme avancen.</span><span class="solo-movil">Cámbialas de columna con el botón de flechas de cada tarjeta.</span></div>';
   h += `<div class="stagebar chips">${ESTADOS.map((s) => `<button class="chip" data-act="colt" data-v="${s[0]}" aria-pressed="${f().col === s[0]}">${s[1]} <span class="tag">${list.filter((t) => t.estado === s[0]).length}</span></button>`).join('')}</div>`;
-  h += '<div class="board t4">';
+  h += `<div class="board t4" style="grid-template-columns:${columnasGrid(ESTADOS.map((e) => e[0]), f().colapsadas)}">`;
   for (const [k, label] of ESTADOS) {
     let items = list.filter((t) => t.estado === k);
-    items = k === 'hecha' ? items.sort((a, b) => String(b.actualizado || '').localeCompare(String(a.actualizado || ''))) : items.sort(ordenTareas);
+    // las hechas siempre de la más reciente a la más vieja; las demás según el orden elegido
+    items = k === 'hecha' ? ordenar('tareas', items, 'recientes') : ordenar('tareas', items, f().orden);
     const total = items.length; const cap = 12; if (k === 'hecha' && !f().verHechas && items.length > cap) items = items.slice(0, cap);
-    h += `<section class="col${f().col === k ? ' active' : ''}${items.length ? '' : ' empty'}" data-col="${k}" data-kind="tarea"><h3><span>${label}</span><span class="n">${total}</span></h3><div class="cards">${items.map(cardTarea).join('')}</div>${k === 'hecha' && total > cap ? `<button class="btn quiet sm" type="button" data-act="verhechas">${f().verHechas ? 'Ver menos' : `Ver las ${total}`}</button>` : ''}</section>`;
+    const pie = k === 'hecha' && total > cap ? `<button class="btn quiet sm" type="button" data-act="verhechas">${f().verHechas ? 'Ver menos' : `Ver las ${total}`}</button>` : '';
+    h += colTablero({ tablero: 'tareas', kind: 'tarea', k, label, total, cards: items.map(cardTarea).join(''), activa: f().col === k, plegada: f().colapsadas.includes(k), pie });
   }
   h += '</div>';
   return h;
@@ -62,10 +65,10 @@ export default {
   badge: () => { const n = tareas().filter((t) => esMia(t) && t.estado !== 'hecha').length; return n ? String(n) : ''; },
   hot: () => { const h = new Date().toISOString().slice(0, 10); return tareas().some((t) => esMia(t) && t.estado !== 'hecha' && t.vence && t.vence < h); },
   vista, panel,
-  filtros: (k, v) => { if (k === 'fase') f().fase = v; },
+  filtros: (k, v) => { if (k === 'fase') f().fase = v; if (k === 'orden') f().orden = v; guardarFiltros(); },
   acciones: {
-    'ftareas': (el) => { f().resp = el.dataset.v; lsSet('mp.f.tareas.resp', f().resp); S.render(); },
-    'colt': (el) => { f().col = el.dataset.v; S.render(); },
+    'ftareas': (el) => { f().resp = el.dataset.v; guardarFiltros(); S.render(); },
+    'colt': (el) => { f().col = el.dataset.v; guardarFiltros(); S.render(); },
     'verhechas': () => { f().verHechas = !f().verHechas; S.render(); },
     'hecha': async (el) => { const t = tareaById(el.dataset.id); if (t) await guardarTarea({ ...t, estado: t.estado === 'hecha' ? 'pendiente' : 'hecha' }); },
     'estado-t': async (el) => { const t = tareaById(el.dataset.id); if (t && t.estado !== el.dataset.s) await guardarTarea({ ...t, estado: el.dataset.s }); },

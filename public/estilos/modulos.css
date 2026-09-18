@@ -16,15 +16,6 @@
 .barlbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted)}
 .grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:16px;align-items:start}
 @media (max-width:900px){.grid2{grid-template-columns:1fr}}
-.stepper{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
-.step{border:1px solid var(--line);background:var(--paper);border-radius:var(--r-sm);padding:8px 6px;display:grid;gap:2px;text-align:center;font-size:13px;font-weight:500;line-height:1.2;color:var(--ink)}
-.step small{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.04em}
-.step.done{color:var(--muted)}
-.step.done small::before{content:"✓ "}
-.step.now{border-color:var(--ink)}
-.step span{justify-self:center}
-.step.now span{border-radius:2px;background:linear-gradient(transparent var(--marker-desde),var(--marker) var(--marker-desde),var(--marker) 92%,transparent 92%);color:var(--marker-ink);padding:0 3px}
-@media (max-width:760px){.stepper{grid-template-columns:repeat(2,1fr)}.step:last-child{grid-column:1/-1}}
 .datos{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
 @media (max-width:520px){.datos{grid-template-columns:1fr}}
 .art{display:grid;grid-template-columns:auto 1fr auto;gap:8px 10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)}
@@ -69,3 +60,48 @@
   .box{padding:14px 16px}
   .box .more{min-height:40px}
 }
+
+
+/* Hoy: «mi día», caja de chat y progreso de entregables */
+.grupo-t{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:12px 0 4px;border-bottom:1px solid var(--line)}
+.grupo-t:first-child{padding-top:0}
+.grupo-t.vencidas{color:var(--bad)} .grupo-t.hoy{color:var(--warn)}
+.box h2 .n.hot{color:var(--bad)}
+.chat-mini{display:grid}
+.chat-mini .msg{padding:6px 0;border-bottom:1px solid var(--line)}
+.chat-mini .msg:last-child{border-bottom:0}
+.chat-mini .msg .txt{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.progreso-art{display:grid;gap:6px;text-decoration:none;color:var(--ink-2);font-size:13px}
+.progreso-art b{color:var(--ink)}
+.progreso-art:hover b{color:var(--accent)}
+
+/* Iteración: línea de tiempo proporcional con marcas de hoy y de la prueba */
+.linea{position:relative;display:flex;gap:4px;padding-top:24px}
+.tramo{flex-basis:0;min-width:0;border:1px solid var(--line);background:var(--paper);border-radius:var(--r-sm);padding:8px 6px;display:grid;gap:2px;text-align:center;font-size:13px;font-weight:500;color:var(--ink);line-height:1.2}
+.tramo .nom,.tramo small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tramo small{font-family:var(--mono);font-size:10px;color:var(--muted)}
+.tramo.done{color:var(--muted);background:var(--surface-2)}
+.tramo.now{border-color:var(--ink);box-shadow:inset 0 -4px 0 var(--marker)}
+.tramo:hover{border-color:var(--ink-2)}
+.linea .marca{position:absolute;top:0;bottom:-4px;border-left:2px solid var(--bad);pointer-events:none}
+.linea .marca span{position:absolute;top:0;left:4px;font-family:var(--mono);font-size:10px;line-height:1;color:var(--bad);white-space:nowrap}
+.linea .marca.prueba{border-left-color:var(--accent)}
+.linea .marca.prueba span{top:12px;color:var(--accent)}
+@media (max-width:760px){
+  .linea{flex-direction:column;padding-top:0}
+  .tramo{flex-grow:0!important;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;padding:8px 12px;text-align:left}
+  .linea .marca{display:none}
+}
+
+/* Ajustes */
+.ajustes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.ajustes .seg{justify-self:start}
+.ajustes .acciones-fila{display:flex;gap:8px;flex-wrap:wrap}
+.ajustes .persona-row .nom .tag{margin-left:6px}
+@media (max-width:900px){.ajustes{grid-template-columns:minmax(0,1fr)}}
+
+/* Hoy en dos columnas independientes (sin huecos por la altura de «Lo mío»); en el teléfono una sola que sigue el
+   orden del documento, para que el tabulador y los lectores de pantalla vayan en el mismo orden que se ve */
+.col-hoy{display:grid;gap:16px;align-content:start;min-width:0}
+@media (max-width:900px){.col-hoy{display:contents}}
+.caja-linea{margin-bottom:16px}

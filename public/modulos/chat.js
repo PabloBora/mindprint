@@ -1,6 +1,6 @@
 /* Chat del equipo; también procesa los comentarios (mensajes con referencia) de los paneles. */
-import { S, mensajes, noLeidos } from '../estado.js';
-import { rutaDe, reemplazar } from '../ruta.js';
+import { S, yo, nombre, mensajes, noLeidos, guardarFiltros } from '../estado.js';
+import { rutaDe, reemplazar, ir } from '../ruta.js';
 import { esc, esTactil, icono, diaDe, etiquetaDia, confirmar, toast } from '../ui/base.js';
 import { itemMsg } from '../ui/piezas.js';
 import { enviarMensaje, borrarMensaje, marcarLeido } from '../api.js';
@@ -37,6 +37,8 @@ export default {
   vista, alMostrar,
   alSalir: () => { S.leidoAlAbrir = null; S.resaltado = ''; },
   acciones: {
+    // Una mención lleva a las tareas de esa persona (las mías, si me mencionan a mí). Sirve en el chat, en Hoy y en los comentarios.
+    'mencion': (el) => { const p = el.dataset.p; const mia = p === yo(); S.f.tareas.resp = mia ? 'mias' : p; S.f.tareas.col = 'pendiente'; guardarFiltros(); ir(rutaDe('tareas')); toast(mia ? 'Tus tareas' : `Tareas de ${nombre(p)}`); },
     // Sin Deshacer: reenviar el texto crearía un mensaje nuevo con otra hora y otro orden.
     'del-msg': async (el) => { if (!(await confirmar({ titulo: 'Borrar tu mensaje', texto: 'Se borra para los tres y no se puede deshacer.', ok: 'Borrar', peligro: true }))) return; if (await borrarMensaje(el.dataset.id)) toast('Mensaje borrado'); },
   },

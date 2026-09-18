@@ -14,7 +14,7 @@ test('rutas por hash: parsear y armar son inversas y toleran basura', () => {
   assert.deepEqual(parsear(rutaDe('oportunidades', 'id-9')), { mod: 'oportunidades', id: 'id-9', sub: null });
 });
 
-const MODS = ['hoy', 'tareas', 'usuarios', 'oportunidades', 'chat', 'iteracion', 'actividad'];
+const MODS = ['hoy', 'tareas', 'usuarios', 'oportunidades', 'chat', 'iteracion', 'actividad', 'ajustes'];
 const fixture = () => ({
   version: 1, yo: { persona: 'pablo', nombre: 'Pablo', rol: 'Tecnología' },
   personas: { pablo: { nombre: 'Pablo', rol: 'Tecnología' }, max: { nombre: 'Max', rol: 'Procesos' }, daniel: { nombre: 'Daniel', rol: 'Mercado' } },

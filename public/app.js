@@ -1,9 +1,9 @@
 /* Arranque de la app: registro de módulos, ruteo por hash, shell (lateral, cabecera, barra inferior),
    panel lateral, búsqueda global, indicador de guardado, delegación de eventos, atajos, arrastre y
    «mover a…», service worker. Los módulos viven en ./modulos/. */
-import { S, P, yo, nombre, tareas, esMia, noLeidos, lsSet, ideaById, tareaById, prospectoById, ESTADOS, ETAPAS_P, STAGES } from './estado.js';
+import { S, P, yo, nombre, tareas, esMia, noLeidos, mencionesSinLeer, lsSet, ideaById, tareaById, prospectoById, ESTADOS, ETAPAS_P, STAGES, leerFiltros, guardarFiltros } from './estado.js';
 import { actual, ir, reemplazar, escuchar, rutaDe } from './ruta.js';
-import { esc, esTactil, icono, avatar, toast, bus, captureFocus, restoreFocus, abrirPanel, cerrarPanel, panelAbierto, atraparFoco, recordarFoco, hoy } from './ui/base.js';
+import { esc, esTactil, icono, avatar, toast, sonar, bus, captureFocus, restoreFocus, abrirPanel, cerrarPanel, panelAbierto, atraparFoco, recordarFoco, hoy } from './ui/base.js';
 import { esqueletoLateral, esqueletoCabecera, esqueletoVista } from './ui/piezas.js';
 import { panelAyuda } from './ui/ayuda.js';
 import { buscarGlobal, GRUPOS } from './buscar.js';
@@ -15,17 +15,19 @@ import oportunidadesMod from './modulos/oportunidades.js';
 import chatMod from './modulos/chat.js';
 import iteracionMod from './modulos/iteracion.js';
 import actividadMod from './modulos/actividad.js';
+import ajustesMod from './modulos/ajustes.js';
 
 /* ---------- registro de módulos ---------- */
 export const MODULOS = new Map();
 export function registrar(mod) { MODULOS.set(mod.id, mod); }
-[hoyMod, tareasMod, usuariosMod, oportunidadesMod, chatMod, iteracionMod, actividadMod].forEach(registrar);
+[hoyMod, tareasMod, usuariosMod, oportunidadesMod, chatMod, iteracionMod, actividadMod, ajustesMod].forEach(registrar);
 const ordenados = () => [...MODULOS.values()].sort((a, b) => (a.orden || 99) - (b.orden || 99));
 const modActual = () => MODULOS.get(S.ruta.mod) || MODULOS.get('hoy');
 
 /* ---------- tema ---------- */
 function aplicarTema() { const t = S.tema === 'auto' ? '' : S.tema; document.documentElement.setAttribute('data-theme', t); }
-aplicarTema();
+function aplicarLetra() { document.documentElement.classList.toggle('letra-grande', S.letra === 'grande'); }
+aplicarTema(); aplicarLetra();
 
 /* ---------- render ---------- */
 const $ = (id) => document.getElementById(id);
@@ -94,8 +96,8 @@ function renderMenu(vencidas) {
   if (!S.menuAbierto) return '';
   const cerrar = '<div class="menu-fondo" data-act="menu-cerrar"></div>';
   if (S.menuAbierto === 'nuevo') return `${cerrar}<div class="menu" role="menu"><button class="item" role="menuitem" data-act="ir" data-ruta="#/tareas/nuevo">${icono('tareas')}Tarea</button><button class="item" role="menuitem" data-act="ir" data-ruta="#/usuarios/nuevo">${icono('usuarios')}Usuario de prueba</button><button class="item" role="menuitem" data-act="ir" data-ruta="#/oportunidades/nuevo">${icono('oportunidades')}Oportunidad</button><button class="item" role="menuitem" data-act="ir" data-ruta="#/chat">${icono('chat')}Mensaje al equipo</button></div>`;
-  if (S.menuAbierto === 'avisos') { const nl = noLeidos(); return `${cerrar}<div class="menu" role="menu">${nl ? `<button class="item" role="menuitem" data-act="ir" data-ruta="#/chat">${icono('chat')}${nl} mensaje${nl === 1 ? '' : 's'} sin leer</button>` : ''}${vencidas ? `<button class="item" role="menuitem" data-act="ir" data-ruta="#/tareas">${icono('tareas')}${vencidas} tarea${vencidas === 1 ? '' : 's'} vencida${vencidas === 1 ? '' : 's'}</button>` : ''}${!nl && !vencidas ? '<div class="cab"><span>Sin avisos. Todo al día.</span></div>' : ''}</div>`; }
-  if (S.menuAbierto === 'persona') { const me = yo(); return `${cerrar}<div class="menu" role="menu"><div class="cab"><b>${esc(nombre(me))}</b><span>${esc((P()[me] || {}).rol || '')}</span></div><div class="sep"></div>${[['auto', 'Tema del sistema', 'auto'], ['light', 'Tema claro', 'sol'], ['dark', 'Tema oscuro', 'luna']].map(([k, n, ic]) => `<button class="item" role="menuitemradio" data-act="tema" data-v="${k}" aria-pressed="${S.tema === k}">${icono(ic)}${n}</button>`).join('')}<div class="sep"></div><button class="item" role="menuitem" data-act="ayuda">${icono('ayuda')}Ayuda y atajos</button><a class="item" role="menuitem" href="https://drive.google.com/drive/folders/1RiT2jf0FVqJdx-KTnQBxuYEWU7-CnKW-" target="_blank" rel="noopener">${icono('drive')}Carpeta en Drive</a><a class="item" role="menuitem" href="/salir" data-act="salir">${icono('salir')}Salir</a></div>`; }
+  if (S.menuAbierto === 'avisos') { const nl = noLeidos(); const nm = mencionesSinLeer(); return `${cerrar}<div class="menu" role="menu">${nm ? `<button class="item" role="menuitem" data-act="ir" data-ruta="#/chat">${icono('chat')}${nm === 1 ? 'Te mencionaron una vez' : `Te mencionaron ${nm} veces`}</button>` : ''}${nl ? `<button class="item" role="menuitem" data-act="ir" data-ruta="#/chat">${icono('chat')}${nl} mensaje${nl === 1 ? '' : 's'} sin leer</button>` : ''}${vencidas ? `<button class="item" role="menuitem" data-act="ir" data-ruta="#/tareas">${icono('tareas')}${vencidas} tarea${vencidas === 1 ? '' : 's'} vencida${vencidas === 1 ? '' : 's'}</button>` : ''}${!nl && !vencidas ? '<div class="cab"><span>Sin avisos. Todo al día.</span></div>' : ''}</div>`; }
+  if (S.menuAbierto === 'persona') { const me = yo(); return `${cerrar}<div class="menu" role="menu"><div class="cab"><b>${esc(nombre(me))}</b><span>${esc((P()[me] || {}).rol || '')}</span></div><div class="sep"></div>${[['auto', 'Tema del sistema', 'auto'], ['light', 'Tema claro', 'sol'], ['dark', 'Tema oscuro', 'luna']].map(([k, n, ic]) => `<button class="item" role="menuitemradio" data-act="tema" data-v="${k}" aria-pressed="${S.tema === k}">${icono(ic)}${n}</button>`).join('')}<div class="sep"></div><button class="item" role="menuitem" data-act="ir" data-ruta="#/ajustes">${icono('ajustes')}Ajustes</button><button class="item" role="menuitem" data-act="ayuda">${icono('ayuda')}Ayuda y atajos</button><a class="item" role="menuitem" href="https://drive.google.com/drive/folders/1RiT2jf0FVqJdx-KTnQBxuYEWU7-CnKW-" target="_blank" rel="noopener">${icono('drive')}Carpeta en Drive</a><a class="item" role="menuitem" href="/salir" data-act="salir">${icono('salir')}Salir</a></div>`; }
   if (S.menuAbierto === 'mas') return `${cerrar}<div class="menu" role="menu">${ordenados().filter((m) => !m.principal).map((m) => `<button class="item" role="menuitem" data-act="ir" data-ruta="${rutaDe(m.id)}">${icono(m.icono)}${esc(m.titulo)}</button>`).join('')}<button class="item" role="menuitem" data-act="ayuda">${icono('ayuda')}Ayuda y atajos</button></div>`;
   if (S.menuAbierto === 'mover' && S.mover) {
     const { kind, id } = S.mover; const doc = docDe(kind, id); if (!doc) return '';
@@ -140,7 +142,18 @@ const tactil = esTactil;
 // «Cancelar» no debe quitarle el foco a la caja antes del clic: si la cabecera se re-acomoda, el toque se pierde.
 document.addEventListener('pointerdown', (e) => { if (e.target.closest && e.target.closest('[data-act="cerrar-busqueda"]')) e.preventDefault(); });
 let tGuardado = null;
-bus.on('estado', render); bus.on('presencia', renderShell); bus.on('conexion', renderShell); bus.on('cola', renderShell);
+/* sonido al llegar un mensaje de otro (si está activado y no se está viendo el chat) */
+let ultimoMsg = null;
+function avisarMensajes() {
+  const ms = (S.estado && S.estado.mensajes) || []; if (!ms.length) return;
+  const max = ms.reduce((a, m) => (!m._pendiente && String(m.fecha) > a ? String(m.fecha) : a), '');
+  if (ultimoMsg === null) { ultimoMsg = max; return; } // primera carga: no suena por lo viejo
+  if (max <= ultimoMsg) return;
+  const nuevos = ms.filter((m) => !m._pendiente && String(m.fecha) > ultimoMsg && m.quien !== yo()); ultimoMsg = max;
+  if (S.sonido && nuevos.length && (document.visibilityState !== 'visible' || S.ruta.mod !== 'chat')) sonar();
+}
+bus.on('estado', () => { avisarMensajes(); render(); }); bus.on('presencia', renderShell);
+bus.on('prefs', (x) => { if (x && x.reset) { S.tema = 'auto'; S.letra = 'normal'; S.sonido = false; S.f = leerFiltros(); } aplicarTema(); aplicarLetra(); render(); }); bus.on('conexion', renderShell); bus.on('cola', renderShell);
 bus.on('guardando', () => { renderShell(); clearTimeout(tGuardado); if (!S.guardando) tGuardado = setTimeout(renderShell, 2600); });
 bus.on('sin-sesion', render);
 bus.on('error', (e) => { if (typeof e === 'string') toast(e); else toast(e.msg, { accion: 'Reintentar', onAccion: e.reintentar, ms: 8000 }); });
@@ -153,7 +166,8 @@ document.addEventListener('click', async (e) => {
   if (act === 'menu') { S.menuAbierto = S.menuAbierto === el.dataset.menu ? null : el.dataset.menu; renderShell(); return; }
   if (act === 'menu-cerrar') { S.menuAbierto = null; S.mover = null; renderShell(); return; }
   if (act === 'ir') { S.menuAbierto = null; ir(el.dataset.ruta); return; }
-  if (act === 'tema') { S.tema = el.dataset.v; lsSet('mp.tema', S.tema); aplicarTema(); S.menuAbierto = null; renderShell(); return; }
+  if (act === 'tema') { S.tema = el.dataset.v; lsSet('mp.tema', S.tema); aplicarTema(); S.menuAbierto = null; render(); return; }
+  if (act === 'colapsar') { const t = S.f[el.dataset.tablero]; if (!t || !Array.isArray(t.colapsadas)) return; const k = el.dataset.col; t.colapsadas = t.colapsadas.includes(k) ? t.colapsadas.filter((x) => x !== k) : [...t.colapsadas, k]; guardarFiltros(); render(); const b = document.querySelector(`[data-act="colapsar"][data-tablero="${el.dataset.tablero}"][data-col="${k}"]`); if (b) b.focus(); return; }
   if (act === 'cerrar-panel') { if (S.ayuda) { cerrarAyuda(); return; } reemplazar(rutaDe(S.ruta.mod)); return; }
   if (act === 'abrir') { recordarFoco(`[data-act="abrir"][data-mod="${el.dataset.mod}"][data-id="${el.dataset.id}"]`); ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
   if (act === 'abrir-res') { S.busqAbierta = false; S.busqIdx = -1; S.q = ''; ir(rutaDe(el.dataset.mod, el.dataset.id)); return; }
@@ -215,7 +229,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key === '?') { e.preventDefault(); if (S.ayuda) cerrarAyuda(); else { S.ayuda = true; render(); } return; }
   if (e.key === 'n') { e.preventDefault(); const mod = modActual(); if (mod.nuevo) ir(rutaDe(mod.id, 'nuevo')); return; }
   if (e.key === 'g') { S.chordG = Date.now(); return; }
-  if (S.chordG && Date.now() - S.chordG < 1200) { const map = { h: 'hoy', t: 'tareas', u: 'usuarios', o: 'oportunidades', c: 'chat', i: 'iteracion', a: 'actividad' }; if (map[e.key]) { e.preventDefault(); ir(rutaDe(map[e.key])); } S.chordG = 0; }
+  if (S.chordG && Date.now() - S.chordG < 1200) { const map = { h: 'hoy', t: 'tareas', u: 'usuarios', o: 'oportunidades', c: 'chat', i: 'iteracion', a: 'actividad', s: 'ajustes' }; if (map[e.key]) { e.preventDefault(); ir(rutaDe(map[e.key])); } S.chordG = 0; }
 });
 
 /* arrastrar tarjetas entre columnas (escritorio); el tipo lo dice data-kind */

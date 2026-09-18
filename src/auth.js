@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 export const PERSONAS = {
   pablo:  { nombre: 'Pablo',  rol: 'Tecnología y desarrollo' },
   max:    { nombre: 'Max',    rol: 'Procesos' },
-  daniel: { nombre: 'Daniel', rol: 'Cliente y negocio · apoyo en desarrollo' },
+  daniel: { nombre: 'Daniel', rol: 'Mercado y usuarios de prueba' },
 };
 export const COOKIE = 'mp_sesion';
 const TOKEN_MIN = 16;

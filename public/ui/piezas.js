@@ -2,6 +2,17 @@
 import { S, P, yo, nombre, RESP, FASES, STAGES, ESTADOS, CRIT, REACC, ETAPAS_P, ideaById, comentariosDe, votosIdea, reaccCount, nSenales, enJuego, etiquetaEtapaP, refInfo } from '../estado.js';
 import { esc, icono, avatar, fmtDia, fmtFechaHora, relTiempo, diasHasta, ligaSegura } from './base.js';
 
+/* ---- tableros: columnas plegables (en escritorio) ---- */
+/** Una columna de tablero. Plegada solo se ve angosta en escritorio; en el teléfono (una columna a la vez) se ve completa. */
+export function colTablero({ tablero, kind, k, label, total, cards, activa, plegada, hl = false, pie = '' }) {
+  return `<section class="col${activa ? ' active' : ''}${total ? '' : ' empty'}${plegada ? ' plegada' : ''}" data-col="${k}" data-kind="${kind}">`
+    + `<h3><button type="button" class="col-cab" data-act="colapsar" data-tablero="${tablero}" data-col="${k}" aria-expanded="${!plegada}" title="${plegada ? 'Mostrar' : 'Plegar'} la columna"><span class="${hl ? 'hl' : ''}">${label}</span><span class="n">${total}</span></button></h3>`
+    + `<div class="cards">${cards}</div>${pie}</section>`;
+}
+/** grid-template-columns del tablero: las plegadas angostas, las demás a partes iguales. */
+export const columnasGrid = (claves, plegadas) => claves.map((k) => (plegadas.includes(k) ? '44px' : 'minmax(0,1fr)')).join(' ');
+export const selectOrden = (tablero, actual, opciones) => `<select class="in orden" data-filtro="orden" aria-label="Orden">${opciones.map(([k, n]) => `<option value="${k}"${actual === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`;
+
 /* ---- comunes ---- */
 /** Botón «mover a…»: siempre visible en el teléfono (no hay arrastre) y al pasar el cursor o enfocar en escritorio. */
 export const btnMover = (kind, id) => `<button class="mover" type="button" data-act="mover" data-kind="${kind}" data-id="${esc(id)}" aria-label="Mover a otra columna" title="Mover a…">${icono('mover', 'sm')}</button>`;
@@ -85,17 +96,21 @@ export function itemActividad(a) {
 }
 
 /* ---- mensajes y comentarios ---- */
+/** Texto de un mensaje a HTML: escapa todo, luego en UNA sola pasada convierte URLs en enlaces y @nombre en botones.
+    Una sola pasada evita que una mención dentro de una URL (un perfil con @pablo en la ruta) meta un botón dentro del enlace. */
 export function formatoMensaje(txt) {
-  let h = esc(txt);
-  h = h.replace(/https?:\/\/[^\s<]+/g, (u) => { const limpio = u.replace(/[),.;!?]+$/, ''); const cola = u.slice(limpio.length); return `<a href="${limpio}" target="_blank" rel="noopener">${limpio}</a>${cola}`; });
-  h = h.replace(/(^|[^\w])@(pablo|max|daniel)\b/gi, (m0, pre, p) => `${pre}<span class="mention${p.toLowerCase() === yo() ? ' me' : ''}">@${p}</span>`);
+  const h = esc(txt).replace(/(https?:\/\/[^\s<]+)|(^|[^\w])@(pablo|max|daniel)\b/gi, (m0, url, pre, p) => {
+    if (url) { const limpio = url.replace(/[),.;!?]+$/, ''); const cola = url.slice(limpio.length); return `<a href="${limpio}" target="_blank" rel="noopener">${limpio}</a>${cola}`; }
+    const k = p.toLowerCase();
+    return `${pre}<button type="button" class="mention${k === yo() ? ' me' : ''}" data-act="mencion" data-p="${k}" title="Ver las tareas de ${esc(nombre(k))}">@${p}</button>`;
+  });
   return h.replace(/\n/g, '<br>');
 }
-export function itemMsg(m, enHilo) {
+export function itemMsg(m, enHilo, { compacto = false } = {}) {
   const mio = m.quien === yo();
   const ref = !enHilo && m.ref ? refInfo(m.ref.tipo, m.ref.id) : null;
   const chipRef = !enHilo && m.ref ? (ref ? `<button class="chip sm" type="button" data-act="abrir" data-mod="${ref.mod}" data-id="${esc(m.ref.id)}">${ref.etiqueta}: ${esc(m.ref.titulo)}</button>` : `<span class="tag">${esc(m.ref.titulo)} (ya no existe)</span>`) : '';
-  return `<div class="msg${mio ? ' mio' : ''}${m._pendiente ? ' por-enviar' : ''}${S.resaltado && S.resaltado === m.id ? ' resaltado' : ''}" data-msg="${esc(m.id)}">${avatar(m.quien, 'sm')}<div class="cuerpo"><div class="hd"><b>${esc(nombre(m.quien) || '¿?')}</b><span class="when" title="${esc(fmtFechaHora(m.fecha))}">${m._pendiente ? 'por enviar' : esc(relTiempo(m.fecha))}</span>${chipRef}${mio ? `<button class="lnk" type="button" data-act="del-msg" data-id="${esc(m.id)}" aria-label="Borrar mensaje">borrar</button>` : ''}</div><div class="txt">${formatoMensaje(m.texto)}</div></div></div>`;
+  return `<div class="msg${mio ? ' mio' : ''}${m._pendiente ? ' por-enviar' : ''}${S.resaltado && S.resaltado === m.id ? ' resaltado' : ''}" data-msg="${esc(m.id)}">${avatar(m.quien, 'sm')}<div class="cuerpo"><div class="hd"><b>${esc(nombre(m.quien) || '¿?')}</b><span class="when" title="${esc(fmtFechaHora(m.fecha))}">${m._pendiente ? 'por enviar' : esc(relTiempo(m.fecha))}</span>${chipRef}${mio && !compacto ? `<button class="lnk" type="button" data-act="del-msg" data-id="${esc(m.id)}" aria-label="Borrar mensaje">borrar</button>` : ''}</div><div class="txt">${formatoMensaje(m.texto)}</div></div></div>`;
 }
 export function seccionComentarios(tipo, id) {
   const hilo = comentariosDe(tipo, id);

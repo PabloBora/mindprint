@@ -6,7 +6,7 @@ const VERSION = '__VERSION__';
 const CACHE = `mindprint-${VERSION}`;
 const FUENTES = 'mindprint-fuentes';
 const SHELL = ['/', '/index.html', '/app.js', '/api.js', '/estado.js', '/ruta.js', '/cola.js', '/buscar.js', '/ui/base.js', '/ui/piezas.js', '/ui/ayuda.js',
-  '/modulos/hoy.js', '/modulos/tareas.js', '/modulos/usuarios.js', '/modulos/oportunidades.js', '/modulos/chat.js', '/modulos/iteracion.js', '/modulos/actividad.js',
+  '/modulos/hoy.js', '/modulos/tareas.js', '/modulos/usuarios.js', '/modulos/oportunidades.js', '/modulos/chat.js', '/modulos/iteracion.js', '/modulos/actividad.js', '/modulos/ajustes.js',
   '/estilos/tokens.css', '/estilos/base.css', '/estilos/shell.css', '/estilos/componentes.css', '/estilos/modulos.css',
   '/manifest.webmanifest', '/iconos/icono.svg', '/iconos/icono-192.png', '/iconos/icono-512.png'];
 
