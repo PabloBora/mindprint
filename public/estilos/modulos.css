@@ -100,10 +100,8 @@
 .ajustes .persona-row .nom .tag{margin-left:6px}
 @media (max-width:900px){.ajustes{grid-template-columns:minmax(0,1fr)}}
 
-/* Hoy en dos columnas independientes (sin huecos por la altura de «Lo mío»); en el teléfono una sola, en orden de uso */
+/* Hoy en dos columnas independientes (sin huecos por la altura de «Lo mío»); en el teléfono una sola que sigue el
+   orden del documento, para que el tabulador y los lectores de pantalla vayan en el mismo orden que se ve */
 .col-hoy{display:grid;gap:16px;align-content:start;min-width:0}
-@media (max-width:900px){
-  .col-hoy{display:contents}
-  .caja-mio{order:0} .caja-chat{order:1} .caja-usuarios{order:2} .caja-fase{order:3} .caja-equipo{order:4} .caja-movs{order:5}
-}
+@media (max-width:900px){.col-hoy{display:contents}}
 .caja-linea{margin-bottom:16px}

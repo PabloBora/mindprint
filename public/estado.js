@@ -36,7 +36,7 @@ export function lsSet(k, v) { try { globalThis.localStorage && globalThis.localS
 /* ---------- filtros y preferencias que se recuerdan en este navegador ---------- */
 const FILTROS_DEF = {
   tareas: { resp: 'todas', fase: 'todas', col: 'pendiente', verHechas: false, orden: 'vence', colapsadas: [] },
-  oportunidades: { autor: 'todos', q: '', stage: 'semilla', orden: 'votos', colapsadas: [] },
+  oportunidades: { autor: 'todos', stage: 'semilla', orden: 'votos', colapsadas: [] },
   usuarios: { resp: 'todas', col: 'candidato', orden: 'siguiente', colapsadas: [] },
   actividad: { quien: 'todos', tipo: 'todo' },
 };
@@ -53,10 +53,10 @@ export function leerFiltros(get = lsGet) {
   if (viejo && !(guardado.tareas && guardado.tareas.resp)) out.tareas.resp = viejo;
   return out;
 }
-/** Guarda los filtros actuales (sin lo pasajero: «ver todas las hechas» y el texto de búsqueda). */
+/** Guarda los filtros actuales (sin lo pasajero: «ver todas las hechas»; la búsqueda vive en S.q y no se guarda). */
 export function guardarFiltros(set = lsSet) {
   const { tareas, oportunidades, usuarios, actividad } = S.f;
-  set('mp.filtros', JSON.stringify({ tareas: { ...tareas, verHechas: false }, oportunidades: { ...oportunidades, q: '' }, usuarios, actividad }));
+  set('mp.filtros', JSON.stringify({ tareas: { ...tareas, verHechas: false }, oportunidades, usuarios, actividad }));
 }
 export const ORDENES = {
   tareas: [['vence', 'Por fecha'], ['recientes', 'Recientes'], ['titulo', 'Por título']],

@@ -19,6 +19,7 @@ export function tramos(it) {
 export function posicion(it, ymd) {
   if (!it.inicio || !ymd) return null;
   const dias = (new Date(`${ymd}T00:00:00`) - new Date(`${it.inicio}T00:00:00`)) / 86400000; const total = semanasDe(it) * 7;
+  if (!(total > 0) || Number.isNaN(dias)) return null;
   return dias < 0 || dias > total ? null : Math.round((dias / total) * 1000) / 10;
 }
 function lineaTiempo(it, idx) {

@@ -14,9 +14,9 @@ const tarea = (id, vence, extra = {}) => ({ id, titulo: `T ${id}`, detalle: '', 
 
 test('filtros: se guardan como JSON sin lo pasajero y se vuelven a leer igual', () => {
   const mem = new Map(); const get = (k, d) => (mem.has(k) ? mem.get(k) : d); const set = (k, v) => mem.set(k, v);
-  S.f = leerFiltros(get); S.f.tareas.resp = 'max'; S.f.tareas.verHechas = true; S.f.tareas.colapsadas = ['hecha']; S.f.oportunidades.q = 'x'; S.f.actividad.tipo = 'idea';
+  S.f = leerFiltros(get); S.f.tareas.resp = 'max'; S.f.tareas.verHechas = true; S.f.tareas.colapsadas = ['hecha']; S.f.actividad.tipo = 'idea';
   guardarFiltros(set); const g = JSON.parse(mem.get('mp.filtros'));
-  assert.equal(g.tareas.resp, 'max'); assert.equal(g.tareas.verHechas, false, '«ver todas» no se recuerda'); assert.equal(g.oportunidades.q, '');
+  assert.equal(g.tareas.resp, 'max'); assert.equal(g.tareas.verHechas, false, '«ver todas» no se recuerda'); assert.ok(!('q' in g.oportunidades), 'la búsqueda no se guarda');
   const otra = leerFiltros(get); assert.deepEqual(otra.tareas.colapsadas, ['hecha']); assert.equal(otra.actividad.tipo, 'idea');
   S.f = leerFiltros(() => null);
 });
@@ -54,6 +54,8 @@ test('Hoy: «mi día» agrupa por vencimiento, muestra lo urgente completo y res
   assert.match(h, /data-act="ver-mias">y 4 más en Tareas</, '10 a la vista, el resto se resume');
   assert.match(h, /<b>1<\/b> de 9 entregables de la iteración/);
   assert.match(h, /class="box caja-chat"/); assert.match(h, /Chat <span class="n">al día/);
+  const orden = ['caja-mio', 'caja-fase', 'caja-chat', 'caja-usuarios', 'caja-equipo', 'caja-movs'].map((c) => h.indexOf(c));
+  assert.deepEqual(orden, orden.slice().sort((a, b) => a - b), 'el orden del documento es el que se ve en el teléfono');
   S.estado.mensajes = [{ id: 'm1', fecha: '2026-09-17T10:00:00Z', quien: 'max', texto: 'oye @pablo', ref: null }, { id: 'm2', fecha: '2026-09-17T10:01:00Z', quien: 'pablo', texto: 'mío', ref: null }]; S.leido = '';
   const c = hoy.default.vista(); assert.match(c, /1 sin leer · 1 te menciona/); assert.ok(!c.includes('data-act="del-msg"'), 'en Hoy no se borra');
 });
@@ -66,6 +68,12 @@ test('menciones: son botones que llevan a las tareas de la persona y la mía se 
   assert.match(h, /class="mention me" data-act="mencion" data-p="pablo"/);
   assert.ok(h.includes('pablo@correo.com') && !/data-p="correo"/.test(h), 'un correo no es mención');
   assert.equal(typeof (await import('../public/modulos/chat.js')).default.acciones.mencion, 'function');
+  // una mención dentro de una URL no mete un botón en el enlace; la URL queda completa y la mención de afuera sigue siendo botón
+  const u = formatoMensaje('mira https://x.com/@pablo/status/1, @max');
+  assert.ok(u.includes('<a href="https://x.com/@pablo/status/1" target="_blank" rel="noopener">https://x.com/@pablo/status/1</a>,'), u);
+  assert.equal((u.match(/<button/g) || []).length, 1); assert.match(u, /data-p="max"/);
+  assert.doesNotMatch(u, /href="[^"]*</, 'ningún atributo href contiene etiquetas');
+  assert.match(formatoMensaje('ver https://a.com/x?y=1&z=2.'), /<a href="https:\/\/a\.com\/x\?y=1&amp;z=2" target="_blank" rel="noopener">https:\/\/a\.com\/x\?y=1&amp;z=2<\/a>\./, 'se escapa y el punto final queda fuera del enlace');
 });
 
 test('iteración: línea de tiempo proporcional con fechas y marcas solo dentro del ciclo', async () => {
@@ -73,6 +81,7 @@ test('iteración: línea de tiempo proporcional con fechas y marcas solo dentro 
   const it = { numero: 1, fase: 'construir', semanas: 6, inicio: '2026-09-08', demo: '2026-10-16', artefactos: {}, decisiones: [], dedicacion: {} };
   const ts = m.tramos(it);
   assert.deepEqual(ts.map((t) => [t.inicio, t.fin]), [['2026-09-08', '2026-09-15'], ['2026-09-15', '2026-09-22'], ['2026-09-22', '2026-10-06'], ['2026-10-06', '2026-10-17'], ['2026-10-17', '2026-10-20']]);
+  assert.equal(m.posicion({ ...it, semanas: -2 }, '2026-09-10'), null, 'semanas inválidas: sin marca, nunca NaN');
   assert.equal(m.posicion(it, '2026-09-08'), 0); assert.equal(m.posicion(it, '2026-10-20'), 100); assert.equal(m.posicion(it, '2026-11-01'), null); assert.equal(m.posicion({ ...it, inicio: '' }, '2026-09-10'), null);
   assert.deepEqual(m.tramos({ ...it, semanas: 8 }).map((t) => Math.round(t.hasta * 10) / 10), [1.3, 2.7, 5.3, 7.3, 8]);
   S.estado = { ...base(), iteracion: it }; S.yo = S.estado.yo;

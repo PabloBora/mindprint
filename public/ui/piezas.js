@@ -96,10 +96,14 @@ export function itemActividad(a) {
 }
 
 /* ---- mensajes y comentarios ---- */
+/** Texto de un mensaje a HTML: escapa todo, luego en UNA sola pasada convierte URLs en enlaces y @nombre en botones.
+    Una sola pasada evita que una mención dentro de una URL (un perfil con @pablo en la ruta) meta un botón dentro del enlace. */
 export function formatoMensaje(txt) {
-  let h = esc(txt);
-  h = h.replace(/https?:\/\/[^\s<]+/g, (u) => { const limpio = u.replace(/[),.;!?]+$/, ''); const cola = u.slice(limpio.length); return `<a href="${limpio}" target="_blank" rel="noopener">${limpio}</a>${cola}`; });
-  h = h.replace(/(^|[^\w])@(pablo|max|daniel)\b/gi, (m0, pre, p) => { const k = p.toLowerCase(); return `${pre}<button type="button" class="mention${k === yo() ? ' me' : ''}" data-act="mencion" data-p="${k}" title="Ver las tareas de ${esc(nombre(k))}">@${p}</button>`; });
+  const h = esc(txt).replace(/(https?:\/\/[^\s<]+)|(^|[^\w])@(pablo|max|daniel)\b/gi, (m0, url, pre, p) => {
+    if (url) { const limpio = url.replace(/[),.;!?]+$/, ''); const cola = url.slice(limpio.length); return `<a href="${limpio}" target="_blank" rel="noopener">${limpio}</a>${cola}`; }
+    const k = p.toLowerCase();
+    return `${pre}<button type="button" class="mention${k === yo() ? ' me' : ''}" data-act="mencion" data-p="${k}" title="Ver las tareas de ${esc(nombre(k))}">@${p}</button>`;
+  });
   return h.replace(/\n/g, '<br>');
 }
 export function itemMsg(m, enHilo, { compacto = false } = {}) {
